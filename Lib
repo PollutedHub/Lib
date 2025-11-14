@@ -1,12 +1,14 @@
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local Pollution = {}
-Pollution.Accent = Color3.fromRGB(0, 255, 0)         -- bright green accent
+Pollution.Accent = Color3.fromRGB(0, 255, 0)
 Pollution.AccentTransparent = Color3.fromRGB(0, 255, 0)
 Pollution.Windows = {}
 Pollution.Values = {}
+Pollution.Configs = {} -- store configs
 
 --[[ Utility Functions ]]--
 local function tweenObject(obj, props, duration, style, direction)
@@ -47,7 +49,7 @@ local MainFrame = Instance.new("Frame")
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.Size = UDim2.new(0, 720, 0, 550)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)  -- dark black background
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
@@ -57,7 +59,7 @@ createUICorner(MainFrame, 6)
 local Container = Instance.new("Frame")
 Container.Size = UDim2.new(0, 678, 0, 505)
 Container.Position = UDim2.new(0.02, 0, 0.05, 0)
-Container.BackgroundColor3 = Color3.fromRGB(20, 20, 20)  -- slightly lighter black for sections
+Container.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Container.BorderSizePixel = 0
 Container.Name = "Container"
 Container.Parent = MainFrame
@@ -173,6 +175,41 @@ function Pollution:CreateWindow(name)
         table.insert(window.Tabs, tab)
         return tab
     end
+
+    -- Automatically create Save Manager tab
+    local saveTab = window:CreateTab("Save Manager")
+
+    -- Save Manager Section
+    local saveSection = saveTab:AddSection("left", "Config Manager")
+
+    -- Add Save Button
+    local saveButton = Instance.new("TextButton")
+    saveButton.Text = "Save Config"
+    saveButton.Size = UDim2.new(1,0,0,30)
+    saveButton.BackgroundColor3 = Pollution.Accent
+    saveButton.TextColor3 = Color3.fromRGB(0,0,0)
+    saveButton.Parent = saveSection
+
+    saveButton.MouseButton1Click:Connect(function()
+        Pollution.Configs[window.Name] = Pollution.Values
+        print("Configuration saved!")
+    end)
+
+    -- Add Load Button
+    local loadButton = Instance.new("TextButton")
+    loadButton.Text = "Load Config"
+    loadButton.Size = UDim2.new(1,0,0,30)
+    loadButton.Position = UDim2.new(0,0,0,35)
+    loadButton.BackgroundColor3 = Pollution.Accent
+    loadButton.TextColor3 = Color3.fromRGB(0,0,0)
+    loadButton.Parent = saveSection
+
+    loadButton.MouseButton1Click:Connect(function()
+        if Pollution.Configs[window.Name] then
+            Pollution.Values = Pollution.Configs[window.Name]
+            print("Configuration loaded!")
+        end
+    end)
 
     return window
 end
