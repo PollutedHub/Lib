@@ -1,143 +1,180 @@
-local Pollution = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
--- Theme
-Pollution.Theme = {
-	BG = Color3.fromRGB(18,18,18),
-	Panel = Color3.fromRGB(28,28,28),
-	Sidebar = Color3.fromRGB(30,30,30),
-	Accent = Color3.fromRGB(200,160,120),
-	Secondary = Color3.fromRGB(40,40,40),
-	Text = Color3.fromRGB(240,240,240),
-	Footer = Color3.fromRGB(22,22,22)
-}
+local Pollution = {}
+Pollution.Accent = Color3.fromRGB(0, 255, 0)         -- bright green accent
+Pollution.AccentTransparent = Color3.fromRGB(0, 255, 0)
+Pollution.Windows = {}
+Pollution.Values = {}
 
--- utility: new instance
-local function new(class, props)
-	local obj = Instance.new(class)
-	for k,v in pairs(props or {}) do
-		if k == "Parent" then obj.Parent = v else obj[k] = v end
-	end
-	return obj
+--[[ Utility Functions ]]--
+local function tweenObject(obj, props, duration, style, direction)
+    style = style or Enum.EasingStyle.Quad
+    direction = direction or Enum.EasingDirection.Out
+    local tween = TweenService:Create(obj, TweenInfo.new(duration, style, direction), props)
+    tween:Play()
+    return tween
 end
 
--- simple tween
-local function tween(obj, props, time)
-	time = time or 0.16
-	TweenService:Create(obj, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
+local function createUICorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 4)
+    corner.Parent = parent
+    return corner
 end
 
--- draggable
-function Pollution.MakeDraggable(frame, handle)
-	handle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			local startMouse = input.Position
-			local startPos = frame.Position
-			local conn
-			conn = UserInputService.InputChanged:Connect(function(move)
-				if move.UserInputType == Enum.UserInputType.MouseMovement then
-					local delta = move.Position - startMouse
-					frame.Position = UDim2.new(
-						math.clamp(startPos.X.Scale,0,1), startPos.X.Offset+delta.X,
-						math.clamp(startPos.Y.Scale,0,1), startPos.Y.Offset+delta.Y
-					)
-				end
-			end)
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					conn:Disconnect()
-				end
-			end)
-		end
-	end)
-end
+--[[ Create Main Screen ]]--
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game:GetService("CoreGui")
 
--- Create main window
-function Pollution.CreateWindow(opts)
-	opts = opts or {}
-	local screenGui = new("ScreenGui", {
-		Name = opts.Name or "PollutionUI",
-		ResetOnSpawn = false,
-		IgnoreGuiInset = true,
-		Parent = player:WaitForChild("PlayerGui")
-	})
+-- Modal Overlay for popups
+local ModalOverlay = Instance.new("TextButton")
+ModalOverlay.Name = "ModalOverlay"
+ModalOverlay.BackgroundTransparency = 1
+ModalOverlay.Text = ""
+ModalOverlay.AutoButtonColor = false
+ModalOverlay.Visible = false
+ModalOverlay.Size = UDim2.fromScale(1,1)
+ModalOverlay.Position = UDim2.fromOffset(0,0)
+ModalOverlay.ZIndex = 999
+ModalOverlay.Parent = ScreenGui
 
-	local main = new("Frame", {
-		Name = "Main",
-		Parent = screenGui,
-		Size = opts.Size or UDim2.new(0,760,0,500),
-		Position = opts.Position or UDim2.new(0.5,0,0.5,0),
-		AnchorPoint = Vector2.new(0.5,0.5),
-		BackgroundColor3 = Pollution.Theme.BG,
-		BorderSizePixel = 0,
-		ClipsDescendants = true
-	})
-	new("UICorner",{Parent=main, CornerRadius=UDim.new(0,8)})
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.Size = UDim2.new(0, 720, 0, 550)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)  -- dark black background
+MainFrame.BorderSizePixel = 0
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+createUICorner(MainFrame, 6)
 
-	-- top bar
-	local top = new("Frame",{Parent=main, Name="Top", Size=UDim2.new(1,0,0,36), BackgroundColor3=Color3.fromRGB(24,24,24), BorderSizePixel=0})
-	new("UICorner",{Parent=top, CornerRadius=UDim.new(0,6)})
-	local title = new("TextLabel",{Parent=top, Text=opts.Title or "Pollution UI", Font=Enum.Font.GothamBold, TextColor3=Pollution.Theme.Accent, TextSize=14, BackgroundTransparency=1, Position=UDim2.new(0,10,0,0), Size=UDim2.new(0,260,1,0), TextXAlignment=Enum.TextXAlignment.Left})
+-- Container
+local Container = Instance.new("Frame")
+Container.Size = UDim2.new(0, 678, 0, 505)
+Container.Position = UDim2.new(0.02, 0, 0.05, 0)
+Container.BackgroundColor3 = Color3.fromRGB(20, 20, 20)  -- slightly lighter black for sections
+Container.BorderSizePixel = 0
+Container.Name = "Container"
+Container.Parent = MainFrame
+createUICorner(Container, 6)
 
-	-- sidebar
-	local sidebar = new("Frame",{Parent=main, Name="Sidebar", Size=UDim2.new(0,150,1,-36), Position=UDim2.new(0,0,0,36), BackgroundColor3=Pollution.Theme.Sidebar, BorderSizePixel=0})
-	new("UICorner",{Parent=sidebar, CornerRadius=UDim.new(0,6)})
+-- Top Bar
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(0, 660, 0, 65)
+TopBar.Position = UDim2.new(0.04, 0, 0.07, 0)
+TopBar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+TopBar.BorderSizePixel = 0
+TopBar.Name = "TopBar"
+TopBar.Parent = MainFrame
+createUICorner(TopBar, 4)
 
-	-- content area
-	local content = new("Frame",{Parent=main, Name="Content", Size=UDim2.new(1,-150,1,-36-24), Position=UDim2.new(0,150,0,36), BackgroundColor3=Pollution.Theme.Panel, BorderSizePixel=0})
-	new("UICorner",{Parent=content, CornerRadius=UDim.new(0,8)})
+-- Library Title
+local LibName = Instance.new("TextLabel")
+LibName.Text = "POLLUTION"
+LibName.TextColor3 = Color3.fromRGB(0, 255, 0)
+LibName.BackgroundTransparency = 1
+LibName.Position = UDim2.new(0.04, 10, 0.4, 0)
+LibName.Size = UDim2.new(0, 1, 0, 1)
+LibName.AutomaticSize = Enum.AutomaticSize.XY
+LibName.TextSize = 21
+LibName.Font = Enum.Font.GothamSemibold
+LibName.Parent = TopBar
 
-	-- footer
-	local footer = new("Frame",{Parent=main, Name="Footer", Size=UDim2.new(1,-150,0,24), Position=UDim2.new(0,150,1,-24), BackgroundColor3=Pollution.Theme.Footer, BorderSizePixel=0})
-	new("UICorner",{Parent=footer, CornerRadius=UDim.new(0,6)})
-	local footerLabel = new("TextLabel",{Parent=footer, Text=opts.FooterText or "Pollution UI | v1.0", Font=Enum.Font.Gotham, TextColor3=Pollution.Theme.Text, TextSize=12, BackgroundTransparency=1, Position=UDim2.new(0,8,0,0), Size=UDim2.new(1,-16,1,0), TextXAlignment=Enum.TextXAlignment.Left})
+-- Header for Tabs
+local Header = Instance.new("Frame")
+Header.AnchorPoint = Vector2.new(1,0.5)
+Header.Position = UDim2.new(1,0,0.5,0)
+Header.Size = UDim2.new(0, 508, 0, 65)
+Header.BackgroundTransparency = 1
+Header.Name = "Header"
+Header.Parent = TopBar
 
-	-- resize handle
-	local resize = new("Frame",{Parent=main, Name="Resize", Size=UDim2.new(0,18,0,18), AnchorPoint=Vector2.new(1,1), Position=UDim2.new(1,0,1,0), BackgroundColor3=Color3.fromRGB(45,40,35), BorderSizePixel=0})
-	new("UICorner",{Parent=resize, CornerRadius=UDim.new(0,4)})
-	do
-		local dragging = false
-		local startPos, startSize
-		resize.InputBegan:Connect(function(input)
-			if input.UserInputType==Enum.UserInputType.MouseButton1 then
-				dragging = true
-				startPos = input.Position
-				startSize = main.Size
-				input.Changed:Connect(function()
-					if input.UserInputState==Enum.UserInputState.End then dragging=false end
-				end)
-			end
-		end)
-		UserInputService.InputChanged:Connect(function(input)
-			if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
-				local delta = input.Position - startPos
-				local newW = math.clamp(startSize.X.Offset + delta.X, 420, 1400)
-				local newH = math.clamp(startSize.Y.Offset + delta.Y, 260, 1000)
-				main.Size = UDim2.new(0,newW,0,newH)
-				footer.Size = UDim2.new(1,-150,0,24)
-				footer.Position = UDim2.new(0,150,1,-24)
-			end
-		end)
-	end
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.FillDirection = Enum.FillDirection.Horizontal
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+UIListLayout.Padding = UDim.new(0,2)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = Header
 
-	Pollution.MakeDraggable(main, top)
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0,10)
+UIPadding.PaddingRight = UDim.new(0,20)
+UIPadding.Parent = Header
 
-	-- API
-	local api = {ScreenGui=screenGui, Main=main, Top=top, Title=title, Sidebar=sidebar, Content=content, Footer=footer, FooterLabel=footerLabel}
-	return api
-end
+--[[ Library Functions ]]--
+function Pollution:CreateWindow(name)
+    local window = {}
+    window.Name = name
+    window.Tabs = {}
+    Pollution.Windows[name] = window
 
--- GroupBox
-function Pollution.CreateGroupBox(parent, title)
-	local gb = new("Frame",{Parent=parent, Size=UDim2.new(1,0,0,120), BackgroundColor3=Pollution.Theme.Panel, BorderSizePixel=0})
-	new("UICorner",{Parent=gb, CornerRadius=UDim.new(0,6)})
-	local header = new("TextLabel",{Parent=gb, Text=title or "Group", Font=Enum.Font.GothamSemibold, TextColor3=Pollution.Theme.Accent, TextSize=14, BackgroundTransparency=1, Position=UDim2.new(0,8,0,6), Size=UDim2.new(1,-16,0,20), TextXAlignment=Enum.TextXAlignment.Left})
-	local body = new("Frame",{Parent=gb, Size=UDim2.new(1,-12,1,-36), Position=UDim2.new(0,6,0,32), BackgroundTransparency=1})
-	local layout = new("UIListLayout",{Parent=body, Padding=UDim.new(0,8), SortOrder=Enum.SortOrder.LayoutOrder})
-	return {Frame=gb, Header=header, Body=body}
+    -- Create tab container
+    window.TabContainer = Instance.new("Frame")
+    window.TabContainer.BackgroundTransparency = 1
+    window.TabContainer.Size = UDim2.new(1,0,1,0)
+    window.TabContainer.Position = UDim2.new(0,0,0,0)
+    window.TabContainer.Parent = Container
+
+    function window:CreateTab(tabName)
+        local tab = {}
+        tab.Name = tabName
+        tab.Sections = {left = {}, right = {}}
+
+        -- Tab Button in Header
+        local btn = Instance.new("TextButton")
+        btn.Text = tabName
+        btn.BackgroundTransparency = 1
+        btn.TextColor3 = Color3.fromRGB(0, 255, 0)
+        btn.Size = UDim2.new(0,100,0,35)
+        btn.Parent = Header
+
+        btn.MouseButton1Click:Connect(function()
+            -- Show/Hide tab contents
+            for _, otherTab in pairs(window.Tabs) do
+                if otherTab.Frame then otherTab.Frame.Visible = false end
+            end
+            tab.Frame.Visible = true
+        end)
+
+        -- Frame for tab content
+        local tabFrame = Instance.new("Frame")
+        tabFrame.Size = UDim2.new(1,0,1,0)
+        tabFrame.BackgroundTransparency = 1
+        tabFrame.Visible = false
+        tabFrame.Parent = window.TabContainer
+        tab.Frame = tabFrame
+
+        function tab:AddSection(side, name)
+            local section = Instance.new("Frame")
+            section.Size = UDim2.new(0.48,0,0.95,0)
+            section.Position = side == "left" and UDim2.new(0,0,0,0) or UDim2.new(0.52,0,0,0)
+            section.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+            section.Parent = tabFrame
+            createUICorner(section,4)
+
+            local label = Instance.new("TextLabel")
+            label.Text = name
+            label.Size = UDim2.new(1,0,0,25)
+            label.TextColor3 = Color3.fromRGB(0,255,0)
+            label.BackgroundTransparency = 1
+            label.Font = Enum.Font.GothamBold
+            label.TextSize = 16
+            label.Parent = section
+
+            table.insert(tab.Sections[side], section)
+            return section
+        end
+
+        table.insert(window.Tabs, tab)
+        return tab
+    end
+
+    return window
 end
 
 return Pollution
