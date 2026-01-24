@@ -2,50 +2,53 @@
 local PolluteUI = {}
 PolluteUI.__index = PolluteUI
 
---// Services
-local UIS = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-
 -- Constructor
 function PolluteUI.new(executorName)
     local self = setmetatable({}, PolluteUI)
     
+    -- Services
+    local Players = game:GetService("Players")
+    local UIS = game:GetService("UserInputService")
+    local player = Players.LocalPlayer
+
     self.executorName = executorName or "Executor"
-    self.tabs = {}
-    self.pageStack = {}
+    self.Players = Players
+    self.UIS = UIS
+    self.player = player
+    self.pageStack = {"HOME"}
     self.selectedIndex = 1
+    self.MenuTree = {}
     self.buttons = {}
-    
-    -- Create main GUI
+
+    -- GUI
     self.gui = Instance.new("ScreenGui")
     self.gui.Name = "PolluteMenu"
     self.gui.ResetOnSpawn = false
     self.gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     self.gui.Parent = player:WaitForChild("PlayerGui")
-    
-    -- Main frame
+
+    -- Main panel
     self.main = Instance.new("Frame", self.gui)
     self.main.Size = UDim2.fromOffset(360, 440)
     self.main.Position = UDim2.fromOffset(40, 160)
     self.main.BackgroundColor3 = Color3.fromRGB(20,20,20)
     self.main.BackgroundTransparency = 0.45
     self.main.BorderSizePixel = 0
-    
+
     -- Title
     self.title = Instance.new("TextLabel", self.main)
     self.title.Size = UDim2.fromOffset(360, 48)
-    self.title.BackgroundColor3 = Color3.fromRGB(0, 210, 0)
+    self.title.BackgroundColor3 = Color3.fromRGB(0,210,0)
     self.title.Text = "POLLUTE"
     self.title.TextColor3 = Color3.new(1,1,1)
     self.title.Font = Enum.Font.GothamBlack
     self.title.TextScaled = true
     self.title.BorderSizePixel = 0
-    
+
     -- Breadcrumb
     self.breadcrumb = Instance.new("TextLabel", self.title)
-    self.breadcrumb.Size = UDim2.fromScale(0.6, 1)
-    self.breadcrumb.Position = UDim2.fromScale(0.02, 0)
+    self.breadcrumb.Size = UDim2.fromScale(0.6,1)
+    self.breadcrumb.Position = UDim2.fromScale(0.02,0)
     self.breadcrumb.BackgroundTransparency = 1
     self.breadcrumb.TextXAlignment = Enum.TextXAlignment.Left
     self.breadcrumb.TextYAlignment = Enum.TextYAlignment.Center
@@ -53,11 +56,11 @@ function PolluteUI.new(executorName)
     self.breadcrumb.Font = Enum.Font.GothamBold
     self.breadcrumb.TextSize = 14
     self.breadcrumb.Text = "HOME"
-    
+
     -- Counter
     self.counter = Instance.new("TextLabel", self.title)
-    self.counter.Size = UDim2.fromScale(0.35, 1)
-    self.counter.Position = UDim2.fromScale(0.63, 0)
+    self.counter.Size = UDim2.fromScale(0.35,1)
+    self.counter.Position = UDim2.fromScale(0.63,0)
     self.counter.BackgroundTransparency = 1
     self.counter.TextXAlignment = Enum.TextXAlignment.Right
     self.counter.TextYAlignment = Enum.TextYAlignment.Center
@@ -65,17 +68,17 @@ function PolluteUI.new(executorName)
     self.counter.Font = Enum.Font.GothamBold
     self.counter.TextSize = 14
     self.counter.Text = "1/1"
-    
+
     -- Content
     self.content = Instance.new("Frame", self.main)
-    self.content.Position = UDim2.fromOffset(0, 48)
-    self.content.Size = UDim2.fromOffset(360, 340)
+    self.content.Position = UDim2.fromOffset(0,48)
+    self.content.Size = UDim2.fromOffset(360,340)
     self.content.BackgroundTransparency = 1
-    
+
     -- Footer
     self.footer = Instance.new("TextLabel", self.main)
-    self.footer.Position = UDim2.fromOffset(0, 388)
-    self.footer.Size = UDim2.fromOffset(360, 52)
+    self.footer.Position = UDim2.fromOffset(0,388)
+    self.footer.Size = UDim2.fromOffset(360,52)
     self.footer.BackgroundColor3 = Color3.fromRGB(15,15,15)
     self.footer.BackgroundTransparency = 0.45
     self.footer.TextColor3 = Color3.fromRGB(200,200,200)
@@ -85,12 +88,12 @@ function PolluteUI.new(executorName)
     self.footer.TextYAlignment = Enum.TextYAlignment.Center
     self.footer.BorderSizePixel = 0
     self.footer.Text = "   "
-    
-    -- Create 20 button placeholders
-    for i = 1, 20 do
+
+    -- Create 20 buttons
+    for i = 1,20 do
         local lbl = Instance.new("TextLabel", self.content)
-        lbl.Size = UDim2.fromOffset(360, 34)
-        lbl.Position = UDim2.fromOffset(0, (i-1)*34)
+        lbl.Size = UDim2.fromOffset(360,34)
+        lbl.Position = UDim2.fromOffset(0,(i-1)*34)
         lbl.BackgroundColor3 = Color3.fromRGB(35,35,35)
         lbl.BackgroundTransparency = 0.15
         lbl.TextColor3 = Color3.new(1,1,1)
@@ -102,98 +105,88 @@ function PolluteUI.new(executorName)
         lbl.Visible = false
         self.buttons[i] = lbl
     end
-    
+
     -- Input handling
-    UIS.InputBegan:Connect(function(input, gp)
-        if gp then return end
-        self:HandleInput(input)
+    UIS.InputBegan:Connect(function(input,gp)
+        if not gp then self:HandleInput(input) end
     end)
-    
+
     return self
 end
 
--- Create a new tab
+-- Add tab
 function PolluteUI:CreateTab(tabName)
-    local tab = {
-        name = tabName,
-        options = {}
-    }
-    self.tabs[tabName] = tab
-    if #self.pageStack == 0 then
-        table.insert(self.pageStack, tabName)
-    end
-    return tab
+    self.MenuTree[tabName] = {}
 end
 
--- Add a button to a tab
-function PolluteUI:AddButton(tabName, buttonName, desc, callback)
-    local tab = self.tabs[tabName]
-    if tab then
-        table.insert(tab.options, {name = buttonName, desc = desc or "", callback = callback})
-    end
+-- Add button to a tab
+function PolluteUI:AddButton(tabName, name, desc, submenu)
+    if not self.MenuTree[tabName] then self:CreateTab(tabName) end
+    table.insert(self.MenuTree[tabName], {name=name, desc=desc or "", submenu=submenu})
 end
 
 -- Clamp helper
-function PolluteUI:Clamp(val, min, max)
-    return math.max(min, math.min(max, val))
+function PolluteUI:Clamp(val,min,max)
+    return math.max(min,math.min(max,val))
 end
 
--- Render the current tab
+-- Render function (keeps same look as original)
 function PolluteUI:Render()
     local page = self.pageStack[#self.pageStack]
-    local tab = self.tabs[page]
-    if not tab then return end
-    
-    local options = tab.options
+    if page == "Players" then
+        self.MenuTree.Players = {}
+        for _,plr in ipairs(self.Players:GetPlayers()) do
+            table.insert(self.MenuTree.Players,{name=plr.Name, desc="Player"})
+        end
+    end
+    local options = self.MenuTree[page] or {}
     self.breadcrumb.Text = page
     self.counter.Text = self.selectedIndex .. "/" .. #options
-    
-    for i, lbl in ipairs(self.buttons) do
+    for i,lbl in ipairs(self.buttons) do
         local opt = options[i]
         lbl.Visible = opt ~= nil
         if opt then
-            lbl.Text = "   " .. opt.name
-            lbl.BackgroundColor3 = (i == self.selectedIndex) and Color3.fromRGB(0,210,0) or Color3.fromRGB(35,35,35)
-            lbl.TextColor3 = (i == self.selectedIndex) and Color3.new(0,0,0) or Color3.new(1,1,1)
+            lbl.Text = "   "..opt.name..(opt.submenu and "   >" or "")
+            lbl.BackgroundColor3 = (i==self.selectedIndex) and Color3.fromRGB(0,210,0) or Color3.fromRGB(35,35,35)
+            lbl.TextColor3 = (i==self.selectedIndex) and Color3.new(0,0,0) or Color3.new(1,1,1)
         end
     end
-    
     local opt = options[self.selectedIndex]
-    self.footer.Text = "   " .. (opt and opt.desc or "")
+    self.footer.Text = "   "..(opt and opt.desc or "")
 end
 
 -- Handle input
 function PolluteUI:HandleInput(input)
     local page = self.pageStack[#self.pageStack]
-    local tab = self.tabs[page]
-    if not tab then return end
-    local options = tab.options
+    local options = self.MenuTree[page] or {}
     local opt = options[self.selectedIndex]
-    
+
     if input.KeyCode == Enum.KeyCode.Down then
-        self.selectedIndex = self:Clamp(self.selectedIndex + 1, 1, #options)
+        self.selectedIndex = self:Clamp(self.selectedIndex+1,1,#options)
         self:Render()
     elseif input.KeyCode == Enum.KeyCode.Up then
-        self.selectedIndex = self:Clamp(self.selectedIndex - 1, 1, #options)
+        self.selectedIndex = self:Clamp(self.selectedIndex-1,1,#options)
         self:Render()
-    elseif input.KeyCode == Enum.KeyCode.Backspace and #self.pageStack > 1 then
+    elseif input.KeyCode == Enum.KeyCode.Backspace and #self.pageStack>1 then
         table.remove(self.pageStack)
         self.selectedIndex = 1
         self:Render()
     elseif input.KeyCode == Enum.KeyCode.Return then
-        if opt and opt.callback then
-            opt.callback()
+        if opt and opt.submenu then
+            table.insert(self.pageStack,opt.submenu)
+            self.selectedIndex = 1
+            self:Render()
         end
     end
 end
 
--- Open the menu
+-- Render initial
 function PolluteUI:Open()
     self.gui.Enabled = true
     self:Render()
 end
 
--- Close the menu
+-- Close menu
 function PolluteUI:Close()
     self.gui.Enabled = false
 end
