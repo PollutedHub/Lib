@@ -114,15 +114,24 @@ function PolluteUI.new(executorName)
     return self
 end
 
--- Add tab
+-- Create a new tab (if it doesn't exist)
 function PolluteUI:CreateTab(tabName)
-    self.MenuTree[tabName] = {}
+    if not self.MenuTree[tabName] then
+        self.MenuTree[tabName] = {}
+    end
 end
 
 -- Add button to a tab
-function PolluteUI:AddButton(tabName, name, desc, submenu)
-    if not self.MenuTree[tabName] then self:CreateTab(tabName) end
-    table.insert(self.MenuTree[tabName], {name=name, desc=desc or "", submenu=submenu})
+-- submenu = string (tab name to open)
+-- callback = function to run when pressing enter
+function PolluteUI:AddButton(tabName, name, desc, submenu, callback)
+    self:CreateTab(tabName)
+    table.insert(self.MenuTree[tabName], {
+        name = name,
+        desc = desc or "",
+        submenu = submenu,
+        callback = callback
+    })
 end
 
 -- Clamp helper
@@ -130,18 +139,22 @@ function PolluteUI:Clamp(val,min,max)
     return math.max(min,math.min(max,val))
 end
 
--- Render function (keeps same look as original)
+-- Render function
 function PolluteUI:Render()
     local page = self.pageStack[#self.pageStack]
+    
+    -- Update Players tab automatically
     if page == "Players" then
         self.MenuTree.Players = {}
         for _,plr in ipairs(self.Players:GetPlayers()) do
             table.insert(self.MenuTree.Players,{name=plr.Name, desc="Player"})
         end
     end
+
     local options = self.MenuTree[page] or {}
     self.breadcrumb.Text = page
     self.counter.Text = self.selectedIndex .. "/" .. #options
+
     for i,lbl in ipairs(self.buttons) do
         local opt = options[i]
         lbl.Visible = opt ~= nil
@@ -151,11 +164,12 @@ function PolluteUI:Render()
             lbl.TextColor3 = (i==self.selectedIndex) and Color3.new(0,0,0) or Color3.new(1,1,1)
         end
     end
+
     local opt = options[self.selectedIndex]
     self.footer.Text = "   "..(opt and opt.desc or "")
 end
 
--- Handle input
+-- Input handling
 function PolluteUI:HandleInput(input)
     local page = self.pageStack[#self.pageStack]
     local options = self.MenuTree[page] or {}
@@ -172,15 +186,21 @@ function PolluteUI:HandleInput(input)
         self.selectedIndex = 1
         self:Render()
     elseif input.KeyCode == Enum.KeyCode.Return then
-        if opt and opt.submenu then
-            table.insert(self.pageStack,opt.submenu)
-            self.selectedIndex = 1
-            self:Render()
+        if opt then
+            if opt.submenu then
+                -- Go into tab
+                table.insert(self.pageStack,opt.submenu)
+                self.selectedIndex = 1
+                self:Render()
+            elseif opt.callback then
+                -- Run callback
+                opt.callback()
+            end
         end
     end
 end
 
--- Render initial
+-- Open menu
 function PolluteUI:Open()
     self.gui.Enabled = true
     self:Render()
