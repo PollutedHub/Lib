@@ -114,10 +114,25 @@ function PolluteUI.new(executorName)
     return self
 end
 
--- Create a new tab (if it doesn't exist)
+-- Create a new tab (auto adds a button in HOME to open it)
 function PolluteUI:CreateTab(tabName)
     if not self.MenuTree[tabName] then
         self.MenuTree[tabName] = {}
+        
+        -- Auto add a button in HOME to access this tab
+        if tabName ~= "HOME" then
+            self:CreateTab("HOME") -- ensure HOME exists
+            local exists = false
+            for _,btn in ipairs(self.MenuTree["HOME"]) do
+                if btn.submenu == tabName then
+                    exists = true
+                    break
+                end
+            end
+            if not exists then
+                table.insert(self.MenuTree["HOME"], {name = tabName, desc = "Open "..tabName.." tab", submenu = tabName})
+            end
+        end
     end
 end
 
