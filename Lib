@@ -1,310 +1,201 @@
---// Pollute UI Library
---// Author: You
---// Executor-safe | API-based | PlayerInfo built-in
+-- PolluteUI Library
+local PolluteUI = {}
+PolluteUI.__index = PolluteUI
 
-local Pollute = {}
-Pollute.__index = Pollute
-
--- Services
+--// Services
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
---==================================================
--- Window
---==================================================
-function Pollute:CreateWindow(config)
-    local self = setmetatable({}, Pollute)
-
-    self.Config = config or {}
-    self.Player = Players.LocalPlayer
-    self.Tabs = {}
-    self.CurrentTab = nil
-    self.SelectedIndex = 1
-
-    -- ScreenGui
-    local gui = Instance.new("ScreenGui")
-    gui.Name = self.Config.Name or "PolluteUI"
-    gui.ResetOnSpawn = false
-    gui.Parent = self.Player:WaitForChild("PlayerGui")
-    self.Gui = gui
-
-    self:BuildWindow()
-    self:InitPlayerInfo()
-    self:BindInput()
-
+-- Constructor
+function PolluteUI.new(executorName)
+    local self = setmetatable({}, PolluteUI)
+    
+    self.executorName = executorName or "Executor"
+    self.tabs = {}
+    self.pageStack = {}
+    self.selectedIndex = 1
+    self.buttons = {}
+    
+    -- Create main GUI
+    self.gui = Instance.new("ScreenGui")
+    self.gui.Name = "PolluteMenu"
+    self.gui.ResetOnSpawn = false
+    self.gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    self.gui.Parent = player:WaitForChild("PlayerGui")
+    
+    -- Main frame
+    self.main = Instance.new("Frame", self.gui)
+    self.main.Size = UDim2.fromOffset(360, 440)
+    self.main.Position = UDim2.fromOffset(40, 160)
+    self.main.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    self.main.BackgroundTransparency = 0.45
+    self.main.BorderSizePixel = 0
+    
+    -- Title
+    self.title = Instance.new("TextLabel", self.main)
+    self.title.Size = UDim2.fromOffset(360, 48)
+    self.title.BackgroundColor3 = Color3.fromRGB(0, 210, 0)
+    self.title.Text = "POLLUTE"
+    self.title.TextColor3 = Color3.new(1,1,1)
+    self.title.Font = Enum.Font.GothamBlack
+    self.title.TextScaled = true
+    self.title.BorderSizePixel = 0
+    
+    -- Breadcrumb
+    self.breadcrumb = Instance.new("TextLabel", self.title)
+    self.breadcrumb.Size = UDim2.fromScale(0.6, 1)
+    self.breadcrumb.Position = UDim2.fromScale(0.02, 0)
+    self.breadcrumb.BackgroundTransparency = 1
+    self.breadcrumb.TextXAlignment = Enum.TextXAlignment.Left
+    self.breadcrumb.TextYAlignment = Enum.TextYAlignment.Center
+    self.breadcrumb.TextColor3 = Color3.new(1,1,1)
+    self.breadcrumb.Font = Enum.Font.GothamBold
+    self.breadcrumb.TextSize = 14
+    self.breadcrumb.Text = "HOME"
+    
+    -- Counter
+    self.counter = Instance.new("TextLabel", self.title)
+    self.counter.Size = UDim2.fromScale(0.35, 1)
+    self.counter.Position = UDim2.fromScale(0.63, 0)
+    self.counter.BackgroundTransparency = 1
+    self.counter.TextXAlignment = Enum.TextXAlignment.Right
+    self.counter.TextYAlignment = Enum.TextYAlignment.Center
+    self.counter.TextColor3 = Color3.new(1,1,1)
+    self.counter.Font = Enum.Font.GothamBold
+    self.counter.TextSize = 14
+    self.counter.Text = "1/1"
+    
+    -- Content
+    self.content = Instance.new("Frame", self.main)
+    self.content.Position = UDim2.fromOffset(0, 48)
+    self.content.Size = UDim2.fromOffset(360, 340)
+    self.content.BackgroundTransparency = 1
+    
+    -- Footer
+    self.footer = Instance.new("TextLabel", self.main)
+    self.footer.Position = UDim2.fromOffset(0, 388)
+    self.footer.Size = UDim2.fromOffset(360, 52)
+    self.footer.BackgroundColor3 = Color3.fromRGB(15,15,15)
+    self.footer.BackgroundTransparency = 0.45
+    self.footer.TextColor3 = Color3.fromRGB(200,200,200)
+    self.footer.Font = Enum.Font.Gotham
+    self.footer.TextSize = 14
+    self.footer.TextXAlignment = Enum.TextXAlignment.Left
+    self.footer.TextYAlignment = Enum.TextYAlignment.Center
+    self.footer.BorderSizePixel = 0
+    self.footer.Text = "   "
+    
+    -- Create 20 button placeholders
+    for i = 1, 20 do
+        local lbl = Instance.new("TextLabel", self.content)
+        lbl.Size = UDim2.fromOffset(360, 34)
+        lbl.Position = UDim2.fromOffset(0, (i-1)*34)
+        lbl.BackgroundColor3 = Color3.fromRGB(35,35,35)
+        lbl.BackgroundTransparency = 0.15
+        lbl.TextColor3 = Color3.new(1,1,1)
+        lbl.Font = Enum.Font.Gotham
+        lbl.TextSize = 16
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.TextYAlignment = Enum.TextYAlignment.Center
+        lbl.BorderSizePixel = 0
+        lbl.Visible = false
+        self.buttons[i] = lbl
+    end
+    
+    -- Input handling
+    UIS.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        self:HandleInput(input)
+    end)
+    
     return self
 end
 
---==================================================
--- UI Build
---==================================================
-function Pollute:BuildWindow()
-    local main = Instance.new("Frame", self.Gui)
-    main.Size = UDim2.fromOffset(360, 440)
-    main.Position = UDim2.fromOffset(40, 160)
-    main.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    main.BackgroundTransparency = 0.45
-    main.BorderSizePixel = 0
-    self.Main = main
-
-    -- Title
-    local title = Instance.new("TextLabel", main)
-    title.Size = UDim2.fromOffset(360, 48)
-    title.BackgroundColor3 = self.Config.Accent or Color3.fromRGB(0,210,0)
-    title.Text = self.Config.Name or "POLLUTE"
-    title.TextColor3 = Color3.new(1,1,1)
-    title.Font = Enum.Font.GothamBlack
-    title.TextScaled = true
-    title.BorderSizePixel = 0
-    self.Title = title
-
-    -- Breadcrumb
-    local crumb = Instance.new("TextLabel", title)
-    crumb.Size = UDim2.fromScale(0.6,1)
-    crumb.Position = UDim2.fromScale(0.02,0)
-    crumb.BackgroundTransparency = 1
-    crumb.TextXAlignment = Enum.TextXAlignment.Left
-    crumb.TextColor3 = Color3.new(1,1,1)
-    crumb.Font = Enum.Font.GothamBold
-    crumb.TextSize = 14
-    crumb.Text = "HOME"
-    self.Breadcrumb = crumb
-
-    -- Content
-    local content = Instance.new("Frame", main)
-    content.Position = UDim2.fromOffset(0,48)
-    content.Size = UDim2.fromOffset(360,340)
-    content.BackgroundTransparency = 1
-    self.Content = content
-
-    self.Buttons = {}
-    for i = 1, 20 do
-        local b = Instance.new("TextLabel", content)
-        b.Size = UDim2.fromOffset(360,34)
-        b.Position = UDim2.fromOffset(0,(i-1)*34)
-        b.BackgroundTransparency = 0.15
-        b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-        b.TextColor3 = Color3.new(1,1,1)
-        b.Font = Enum.Font.Gotham
-        b.TextSize = 16
-        b.TextXAlignment = Enum.TextXAlignment.Left
-        b.BorderSizePixel = 0
-        b.Visible = false
-        self.Buttons[i] = b
-    end
-end
-
---==================================================
--- Tabs
---==================================================
-function Pollute:CreateTab(name, description, flags)
+-- Create a new tab
+function PolluteUI:CreateTab(tabName)
     local tab = {
-        Name = name,
-        Description = description or "",
-        Flags = flags or {},
-        Items = {}
+        name = tabName,
+        options = {}
     }
-
-    self.Tabs[name] = tab
-
-    if not self.CurrentTab then
-        self:SwitchTab(tab)
+    self.tabs[tabName] = tab
+    if #self.pageStack == 0 then
+        table.insert(self.pageStack, tabName)
     end
-
     return tab
 end
 
-function Pollute:SwitchTab(tab)
-    self.CurrentTab = tab
-    self.SelectedIndex = 1
-    self.Breadcrumb.Text = tab.Name
+-- Add a button to a tab
+function PolluteUI:AddButton(tabName, buttonName, desc, callback)
+    local tab = self.tabs[tabName]
+    if tab then
+        table.insert(tab.options, {name = buttonName, desc = desc or "", callback = callback})
+    end
+end
 
-    self.InfoGui.Enabled = tab.Flags.PlayerInfo == true
+-- Clamp helper
+function PolluteUI:Clamp(val, min, max)
+    return math.max(min, math.min(max, val))
+end
 
+-- Render the current tab
+function PolluteUI:Render()
+    local page = self.pageStack[#self.pageStack]
+    local tab = self.tabs[page]
+    if not tab then return end
+    
+    local options = tab.options
+    self.breadcrumb.Text = page
+    self.counter.Text = self.selectedIndex .. "/" .. #options
+    
+    for i, lbl in ipairs(self.buttons) do
+        local opt = options[i]
+        lbl.Visible = opt ~= nil
+        if opt then
+            lbl.Text = "   " .. opt.name
+            lbl.BackgroundColor3 = (i == self.selectedIndex) and Color3.fromRGB(0,210,0) or Color3.fromRGB(35,35,35)
+            lbl.TextColor3 = (i == self.selectedIndex) and Color3.new(0,0,0) or Color3.new(1,1,1)
+        end
+    end
+    
+    local opt = options[self.selectedIndex]
+    self.footer.Text = "   " .. (opt and opt.desc or "")
+end
+
+-- Handle input
+function PolluteUI:HandleInput(input)
+    local page = self.pageStack[#self.pageStack]
+    local tab = self.tabs[page]
+    if not tab then return end
+    local options = tab.options
+    local opt = options[self.selectedIndex]
+    
+    if input.KeyCode == Enum.KeyCode.Down then
+        self.selectedIndex = self:Clamp(self.selectedIndex + 1, 1, #options)
+        self:Render()
+    elseif input.KeyCode == Enum.KeyCode.Up then
+        self.selectedIndex = self:Clamp(self.selectedIndex - 1, 1, #options)
+        self:Render()
+    elseif input.KeyCode == Enum.KeyCode.Backspace and #self.pageStack > 1 then
+        table.remove(self.pageStack)
+        self.selectedIndex = 1
+        self:Render()
+    elseif input.KeyCode == Enum.KeyCode.Return then
+        if opt and opt.callback then
+            opt.callback()
+        end
+    end
+end
+
+-- Open the menu
+function PolluteUI:Open()
+    self.gui.Enabled = true
     self:Render()
 end
 
---==================================================
--- Elements
---==================================================
-function Pollute:AddButton(tab, config)
-    table.insert(tab.Items, {
-        Name = config.Name,
-        Description = config.Description or "",
-        Callback = config.Callback
-    })
+-- Close the menu
+function PolluteUI:Close()
+    self.gui.Enabled = false
 end
 
-function Pollute:AddPlayer(tab, player)
-    table.insert(tab.Items, {
-        Name = player.Name,
-        Player = player
-    })
-end
-
---==================================================
--- Render
---==================================================
-function Pollute:Render()
-    local items = self.CurrentTab.Items
-
-    for i, btn in ipairs(self.Buttons) do
-        local item = items[i]
-        btn.Visible = item ~= nil
-
-        if item then
-            btn.Text = "   " .. item.Name
-            btn.BackgroundColor3 =
-                (i == self.SelectedIndex)
-                and (self.Config.Accent or Color3.fromRGB(0,210,0))
-                or Color3.fromRGB(35,35,35)
-
-            btn.TextColor3 =
-                (i == self.SelectedIndex)
-                and Color3.new(0,0,0)
-                or Color3.new(1,1,1)
-        end
-    end
-
-    if self.CurrentTab.Flags.PlayerInfo then
-        local item = items[self.SelectedIndex]
-        if item and item.Player then
-            self:UpdatePlayerInfo(item.Player)
-        end
-    end
-end
-
---==================================================
--- Input
---==================================================
-function Pollute:BindInput()
-    UIS.InputBegan:Connect(function(input, gp)
-        if gp or not self.CurrentTab then return end
-        local items = self.CurrentTab.Items
-
-        if input.KeyCode == Enum.KeyCode.Down then
-            self.SelectedIndex = math.clamp(self.SelectedIndex + 1, 1, #items)
-            self:Render()
-
-        elseif input.KeyCode == Enum.KeyCode.Up then
-            self.SelectedIndex = math.clamp(self.SelectedIndex - 1, 1, #items)
-            self:Render()
-
-        elseif input.KeyCode == Enum.KeyCode.Return then
-            local item = items[self.SelectedIndex]
-            if item and item.Callback then
-                task.spawn(item.Callback)
-            end
-        end
-    end)
-end
-
---==================================================
--- Player Info (INTERNAL)
---==================================================
-function Pollute:InitPlayerInfo()
-    local infoGui = Instance.new("ScreenGui")
-    infoGui.Name = "PollutePlayerInfo"
-    infoGui.ResetOnSpawn = false
-    infoGui.Enabled = false
-    infoGui.Parent = self.Player.PlayerGui
-    self.InfoGui = infoGui
-
-    local panel = Instance.new("Frame", infoGui)
-    panel.Size = UDim2.fromOffset(460,260)
-    panel.Position = UDim2.fromOffset(420,160)
-    panel.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    panel.BackgroundTransparency = 0.25
-    panel.BorderSizePixel = 0
-    self.InfoPanel = panel
-
-    local viewport = Instance.new("ViewportFrame", panel)
-    viewport.Position = UDim2.fromOffset(10,46)
-    viewport.Size = UDim2.fromOffset(120,200)
-    viewport.BackgroundColor3 = Color3.fromRGB(15,15,15)
-    viewport.BorderSizePixel = 0
-    self.Viewport = viewport
-
-    local cam = Instance.new("Camera", viewport)
-    viewport.CurrentCamera = cam
-    self.ViewCam = cam
-
-    self.InfoStats = {}
-    self:CreateStat("Health",150,50)
-    self:CreateStat("WalkSpeed",150,74)
-    self:CreateStat("JumpPower",150,98)
-    self:CreateStat("Team",300,50)
-    self:CreateStat("State",300,74)
-    self:CreateStat("Rig",300,98)
-    self:CreateStat("Username",300,122)
-end
-
-function Pollute:CreateStat(name,x,y)
-    local l = Instance.new("TextLabel", self.InfoPanel)
-    l.Position = UDim2.fromOffset(x,y)
-    l.Size = UDim2.fromOffset(90,22)
-    l.BackgroundTransparency = 1
-    l.Text = name
-    l.Font = Enum.Font.Gotham
-    l.TextSize = 14
-    l.TextColor3 = Color3.fromRGB(180,180,180)
-    l.TextXAlignment = Enum.TextXAlignment.Left
-
-    local v = Instance.new("TextLabel", self.InfoPanel)
-    v.Position = UDim2.fromOffset(x+100,y)
-    v.Size = UDim2.fromOffset(100,22)
-    v.BackgroundTransparency = 1
-    v.Font = Enum.Font.GothamBold
-    v.TextSize = 14
-    v.TextColor3 = Color3.new(1,1,1)
-    v.TextXAlignment = Enum.TextXAlignment.Left
-    v.Text = "-"
-
-    self.InfoStats[name] = v
-end
-
-function Pollute:UpdatePlayerInfo(player)
-    local char = player.Character
-    if not char then return end
-
-    self:LoadCharacter(char)
-
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    self.InfoStats.Health.Text = hum and math.floor(hum.Health) or "-"
-    self.InfoStats.WalkSpeed.Text = hum and hum.WalkSpeed or "-"
-    self.InfoStats.JumpPower.Text = hum and hum.JumpPower or "-"
-    self.InfoStats.Username.Text = player.Name
-    self.InfoStats.Team.Text = player.Team and player.Team.Name or "No Team"
-    self.InfoStats.Rig.Text = hum and hum.RigType.Name or "-"
-end
-
-function Pollute:LoadCharacter(char)
-    if self.CurrentModel then
-        self.CurrentModel:Destroy()
-    end
-
-    char.Archivable = true
-    local clone = char:Clone()
-    char.Archivable = false
-    clone.Parent = self.Viewport
-
-    for _,v in ipairs(clone:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Anchored = true
-            v.CanCollide = false
-        elseif v:IsA("Script") or v:IsA("LocalScript") then
-            v:Destroy()
-        elseif v:IsA("Motor6D") then
-            v.Enabled = false
-        end
-    end
-
-    self.CurrentModel = clone
-
-    local size = clone:GetExtentsSize()
-    self.ViewCam.CFrame =
-        CFrame.new(Vector3.new(0, size.Y/2, size.Z*1.5),
-                   Vector3.new(0, size.Y/2, 0))
-end
-
-return Pollute
+return PolluteUI
