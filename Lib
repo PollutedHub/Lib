@@ -602,6 +602,48 @@ GmmUI.NewMenu = function(self, name)
 	return Menu.new(self, name)
 end
 
+
+-- Creates a dynamic player list menu
+function GmmUI.NewPlayerList(self, menuName, callback)
+	menuName = menuName or "PLAYER LIST"
+	local menu = self:NewMenu(menuName)
+
+	-- Function to refresh the player list dynamically
+	local function refreshPlayers()
+		-- Clear old items
+		menu.Items = {}
+
+		-- Add a button for each player in the game
+		for _, player in ipairs(Players:GetPlayers()) do
+			menu:Button(player.Name, "Select " .. player.Name, function()
+				if typeof(callback) == "function" then
+					task.spawn(callback, player) -- Call callback with selected player
+				end
+			end)
+		end
+
+		-- Re-render menu if it's currently active
+		if self.Current == menu then
+			self:_renderMenu(menu)
+		end
+	end
+
+	-- Initial population
+	refreshPlayers()
+
+	-- Optional: update automatically when players join/leave
+	local playerAddedConn = Players.PlayerAdded:Connect(refreshPlayers)
+	local playerRemovingConn = Players.PlayerRemoving:Connect(refreshPlayers)
+
+	-- Store connections for cleanup later
+	table.insert(self._connections, playerAddedConn)
+	table.insert(self._connections, playerRemovingConn)
+
+	return menu
+end
+
+
+
 -- Set the title text of the UI
 GmmUI.SetTitle = function(self, text)
 	self.TitleLabel.Text = tostring(text):upper()
