@@ -45,6 +45,17 @@ local DEFAULTS = {
 	HeaderHeight=78, SubHeight=24, FooterHeight=38, RowHeight=30
 }
 
+
+
+
+
+
+
+
+
+
+
+
 -- Safely get a parent for GUI
 local function safeParentGui()
 	local lp = Players.LocalPlayer
@@ -74,6 +85,18 @@ Menu._addItem = function(self, item)
 	return item
 end
 
+
+
+
+
+
+
+
+
+
+
+
+
 -- Add a button to the menu
 Menu.Button = function(self, label, desc, callback)
 	return self:_addItem({
@@ -87,6 +110,17 @@ Menu.Button = function(self, label, desc, callback)
 		end
 	})
 end
+
+
+
+
+
+
+
+
+
+
+
 
 -- Add a toggle (on/off) to the menu
 Menu.Toggle = function(self, label, desc, defaultValue, callback)
@@ -108,6 +142,29 @@ Menu.Toggle = function(self, label, desc, defaultValue, callback)
 		ValueText=function(it) return (it.Get() and "ON") or "OFF" end -- Display text
 	})
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 -- Add a slider to the menu
 Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback)
@@ -138,6 +195,16 @@ Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback
 		ValueText=function(it) return tostring(it.Get()) end -- Display value
 	})
 end
+
+
+
+
+
+
+
+
+
+
 
 -- Add a list (selection) to the menu
 Menu.List = function(self, label, desc, values, defaultIndex, callback)
@@ -182,6 +249,21 @@ Menu.Submenu = function(self, label, desc, submenu)
 		end
 	})
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 -- Main GmmUI constructor
 GmmUI.new = function(opts)
@@ -339,6 +421,44 @@ GmmUI.new = function(opts)
 		TextWrapped=true
 	})
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	-- List of input actions
 	self._casActions = {"GmmUI_Toggle","GmmUI_Up","GmmUI_Down","GmmUI_Left","GmmUI_Right","GmmUI_PageUp","GmmUI_PageDown","GmmUI_Back","GmmUI_Select"}
 
@@ -477,374 +597,493 @@ end;
 
 
 
+-- Create a new menu inside the UI
 GmmUI.NewMenu = function(self, name)
-	return Menu.new(self, name);
-end;
+	return Menu.new(self, name)
+end
+
+-- Set the title text of the UI
 GmmUI.SetTitle = function(self, text)
-	self.TitleLabel.Text = tostring(text):upper();
-end;
+	self.TitleLabel.Text = tostring(text):upper()
+end
+
+-- Set the tab/sub-header text
 GmmUI.SetTab = function(self, text)
-	self.TabLabel.Text = tostring(text):upper();
-end;
+	self.TabLabel.Text = tostring(text):upper()
+end
+
+-- Update the counter showing current selected item / total items
 GmmUI._updateCounter = function(self)
-	local total = (self.Current and #self.Current.Items) or 0;
-	local sel = ((total > 0) and math.clamp(self.SelectedIndex, 1, total)) or 0;
-	self.CounterLabel.Text = string.format("%d / %d", sel, total);
-end;
+	local total = (self.Current and #self.Current.Items) or 0 -- Total items in current menu
+	local sel = ((total > 0) and math.clamp(self.SelectedIndex, 1, total)) or 0 -- Clamp selected index
+	self.CounterLabel.Text = string.format("%d / %d", sel, total)
+end
+
+-- Save the current menu state (selected index and scroll position)
 GmmUI._saveMenuState = function(self)
-	local menu = self.Current;
+	local menu = self.Current
 	if not menu then
-		return;
+		return
 	end
-	menu._savedIndex = tonumber(self.SelectedIndex) or 0;
+	menu._savedIndex = tonumber(self.SelectedIndex) or 0
 	if self.Scroll then
-		local y = (self._scrollTargetY ~= nil and self._scrollTargetY) or self.Scroll.CanvasPosition.Y;
-		menu._savedCanvasY = tonumber(y) or 0;
+		local y = (self._scrollTargetY ~= nil and self._scrollTargetY) or self.Scroll.CanvasPosition.Y
+		menu._savedCanvasY = tonumber(y) or 0
 	end
-end;
+end
+
+-- Clear all UI rows from previous menu
 GmmUI._clearRows = function(self)
 	for _, row in ipairs(self._rowObjects) do
 		if (row and row.Destroy) then
-			row:Destroy();
+			row:Destroy() -- Remove the UI element
 		end
 	end
-	self._rowObjects = {};
-end;
+	self._rowObjects = {}
+end
+
+-- Create a single row/button for a menu item
 GmmUI._makeRow = function(self, item, index)
-	local opts = self.Opts;
-	local row = mk("TextButton", {Parent=self.Scroll,Size=UDim2.new(1, 0, 0, opts.RowHeight),BackgroundTransparency=1,BorderSizePixel=0,AutoButtonColor=false,Text=""});
-	local selBg = mk("Frame", {Parent=row,Size=UDim2.new(1, 0, 1, 0),BackgroundColor3=opts.Select,BorderSizePixel=0,Visible=false});
-	mk("Frame", {Parent=row,AnchorPoint=Vector2.new(0, 1),Position=UDim2.new(0, 0, 1, 0),Size=UDim2.new(1, 0, 0, 1),BackgroundColor3=Color3.fromRGB(255, 255, 255),BackgroundTransparency=0.92,BorderSizePixel=0});
-	local left = mk("TextLabel", {Parent=row,BackgroundTransparency=1,Position=UDim2.fromOffset(10, 0),Size=UDim2.new(1, -110, 1, 0),Font=Enum.Font.Gotham,Text=item.Label,TextColor3=opts.Text,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left});
-	local right = mk("TextLabel", {Parent=row,BackgroundTransparency=1,Position=UDim2.new(1, -86, 0, 0),Size=UDim2.fromOffset(62, opts.RowHeight),Font=Enum.Font.GothamBold,Text="",TextColor3=opts.Text,TextSize=13,TextXAlignment=Enum.TextXAlignment.Right});
-	local arrow = mk("TextLabel", {Parent=row,BackgroundTransparency=1,Position=UDim2.new(1, -24, 0, 0),Size=UDim2.fromOffset(24, opts.RowHeight),Font=Enum.Font.GothamBold,Text=">",TextColor3=opts.Text,TextSize=14});
+	local opts = self.Opts
+	local row = mk("TextButton", {
+		Parent=self.Scroll,
+		Size=UDim2.new(1, 0, 0, opts.RowHeight),
+		BackgroundTransparency=1,
+		BorderSizePixel=0,
+		AutoButtonColor=false,
+		Text=""
+	})
+
+	-- Selection background
+	local selBg = mk("Frame", {
+		Parent=row,
+		Size=UDim2.new(1, 0, 1, 0),
+		BackgroundColor3=opts.Select,
+		BorderSizePixel=0,
+		Visible=false
+	})
+
+	-- Bottom line separator
+	mk("Frame", {
+		Parent=row,
+		AnchorPoint=Vector2.new(0, 1),
+		Position=UDim2.new(0, 0, 1, 0),
+		Size=UDim2.new(1, 0, 0, 1),
+		BackgroundColor3=Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency=0.92,
+		BorderSizePixel=0
+	})
+
+	-- Left label (item name)
+	local left = mk("TextLabel", {
+		Parent=row,
+		BackgroundTransparency=1,
+		Position=UDim2.fromOffset(10, 0),
+		Size=UDim2.new(1, -110, 1, 0),
+		Font=Enum.Font.Gotham,
+		Text=item.Label,
+		TextColor3=opts.Text,
+		TextSize=14,
+		TextXAlignment=Enum.TextXAlignment.Left
+	})
+
+	-- Right label (value / slider / list)
+	local right = mk("TextLabel", {
+		Parent=row,
+		BackgroundTransparency=1,
+		Position=UDim2.new(1, -86, 0, 0),
+		Size=UDim2.fromOffset(62, opts.RowHeight),
+		Font=Enum.Font.GothamBold,
+		Text="",
+		TextColor3=opts.Text,
+		TextSize=13,
+		TextXAlignment=Enum.TextXAlignment.Right
+	})
+
+	-- Arrow for submenus
+	local arrow = mk("TextLabel", {
+		Parent=row,
+		BackgroundTransparency=1,
+		Position=UDim2.new(1, -24, 0, 0),
+		Size=UDim2.fromOffset(24, opts.RowHeight),
+		Font=Enum.Font.GothamBold,
+		Text=">",
+		TextColor3=opts.Text,
+		TextSize=14
+	})
 	if (item.HasArrow or (item.Type == "Submenu")) then
-		arrow.Visible = true;
+		arrow.Visible = true
 	else
-		arrow.Visible = false;
+		arrow.Visible = false
 	end
+
+	-- Function to set selection visuals
 	local function setSelected(on)
-		selBg.Visible = on;
-		local c = (on and (opts.SelectedText or opts.Text)) or opts.Text;
-		left.TextColor3 = c;
-		right.TextColor3 = c;
-		arrow.TextColor3 = c;
+		selBg.Visible = on
+		local c = (on and (opts.SelectedText or opts.Text)) or opts.Text
+		left.TextColor3 = c
+		right.TextColor3 = c
+		arrow.TextColor3 = c
 		if on then
-			selBg.BackgroundTransparency = 0.2;
-			tween(selBg, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency=0});
+			selBg.BackgroundTransparency = 0.2
+			tween(selBg, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency=0})
 		end
 	end
+
+	-- Function to update the value display (slider/list)
 	local function refreshValue()
 		if item.ValueText then
-			local t = item:ValueText();
+			local t = item:ValueText()
 			if ((item.Type == "Slider") and self._edit and (self._edit.Item == item)) then
-				right.Text = "< " .. t .. " >";
+				right.Text = "< " .. t .. " >"
 			else
-				right.Text = t;
+				right.Text = t
 			end
 		else
-			right.Text = "";
+			right.Text = ""
 		end
 	end
-	refreshValue();
+	refreshValue()
+
+	-- Click handler for row
 	row.MouseButton1Click:Connect(function()
 		if self._edit then
-			return;
+			return
 		end
-		self:SetSelected(index);
-		self:Select();
-	end);
-	return row, setSelected, refreshValue;
-end;
+		self:SetSelected(index)
+		self:Select()
+	end)
+
+	return row, setSelected, refreshValue
+end
+
+-- Render a menu (create rows, set tab, restore selection)
 GmmUI._renderMenu = function(self, menu)
-	self:_clearRows();
-	self.Current = menu;
-	self:SetTab(menu.Name);
+	self:_clearRows()
+	self.Current = menu
+	self:SetTab(menu.Name)
+
 	for i, item in ipairs(menu.Items) do
-		local row, setSelected, refreshValue = self:_makeRow(item, i);
-		item.__row = row;
-		item.__setSelected = setSelected;
-		item.__refreshValue = refreshValue;
-		table.insert(self._rowObjects, row);
+		local row, setSelected, refreshValue = self:_makeRow(item, i)
+		item.__row = row
+		item.__setSelected = setSelected
+		item.__refreshValue = refreshValue
+		table.insert(self._rowObjects, row)
 	end
+
 	if (#menu.Items > 0) then
-		local savedY = tonumber(menu._savedCanvasY) or 0;
+		local savedY = tonumber(menu._savedCanvasY) or 0
 		if self._scrollTween then
-			pcall(function()
-				self._scrollTween:Cancel();
-			end);
-			self._scrollTween = nil;
+			pcall(function() self._scrollTween:Cancel() end)
+			self._scrollTween = nil
 		end
-		self.Scroll.CanvasPosition = Vector2.new(0, savedY);
-		self._scrollTargetY = savedY;
-		local savedIdx = tonumber(menu._savedIndex);
+		self.Scroll.CanvasPosition = Vector2.new(0, savedY)
+		self._scrollTargetY = savedY
+
+		local savedIdx = tonumber(menu._savedIndex)
 		if not (savedIdx and (savedIdx >= 1) and (savedIdx <= #menu.Items)) then
-			savedIdx = 1;
+			savedIdx = 1
 		end
-		self:SetSelected(savedIdx);
+		self:SetSelected(savedIdx)
 	else
-		self.SelectedIndex = 0;
-		self.DescLabel.Text = "No options.";
-		self:_updateCounter();
+		self.SelectedIndex = 0
+		self.DescLabel.Text = "No options."
+		self:_updateCounter()
 	end
-end;
+end
+
+-- Push a new menu onto the stack
 GmmUI.PushMenu = function(self, menu)
-	self:_saveMenuState();
-	table.insert(self.MenuStack, menu);
-	self:_renderMenu(menu);
-end;
+	self:_saveMenuState()
+	table.insert(self.MenuStack, menu)
+	self:_renderMenu(menu)
+end
+
+-- Go back to previous menu in stack
 GmmUI.Back = function(self)
 	if self._edit then
-		self:CancelEdit();
-		return;
+		self:CancelEdit()
+		return
 	end
 	if (#self.MenuStack <= 1) then
-		self:Close();
-		return;
+		self:Close()
+		return
 	end
-	self:_saveMenuState();
-	table.remove(self.MenuStack, #self.MenuStack);
-	local top = self.MenuStack[#self.MenuStack];
-	self:_renderMenu(top);
-end;
+	self:_saveMenuState()
+	table.remove(self.MenuStack, #self.MenuStack)
+	local top = self.MenuStack[#self.MenuStack]
+	self:_renderMenu(top)
+end
+
+-- Smooth scroll to a specific Y position in menu
 GmmUI._scrollTo = function(self, targetY)
-	local scroll = self.Scroll;
-	if not scroll then
-		return;
-	end
-	targetY = tonumber(targetY) or 0;
-	self._scrollTargetY = targetY;
-	local absCanvasY = scroll.AbsoluteCanvasSize.Y;
-	local maxY = (absCanvasY > 0) and math.max(0, absCanvasY - scroll.AbsoluteSize.Y) or math.huge;
-	targetY = math.clamp(targetY, 0, maxY);
+	local scroll = self.Scroll
+	if not scroll then return end
+
+	targetY = tonumber(targetY) or 0
+	self._scrollTargetY = targetY
+
+	local absCanvasY = scroll.AbsoluteCanvasSize.Y
+	local maxY = (absCanvasY > 0) and math.max(0, absCanvasY - scroll.AbsoluteSize.Y) or math.huge
+	targetY = math.clamp(targetY, 0, maxY)
+
 	if self._scrollTween then
-		pcall(function()
-			self._scrollTween:Cancel();
-		end);
-		self._scrollTween = nil;
+		pcall(function() self._scrollTween:Cancel() end)
+		self._scrollTween = nil
 	end
-	local smoothness = tonumber(self.Opts and self.Opts.ScrollSmoothness) or 0;
+
+	local smoothness = tonumber(self.Opts and self.Opts.ScrollSmoothness) or 0
 	if (smoothness <= 0) then
-		scroll.CanvasPosition = Vector2.new(0, targetY);
-		self._scrollTargetY = targetY;
-		return;
+		scroll.CanvasPosition = Vector2.new(0, targetY)
+		self._scrollTargetY = targetY
+		return
 	end
-	local duration = math.clamp(0.04 * smoothness, 0.05, 0.4);
-	self._scrollTween = tween(scroll, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CanvasPosition=Vector2.new(0, targetY)});
-end;
+
+	local duration = math.clamp(0.04 * smoothness, 0.05, 0.4)
+	self._scrollTween = tween(scroll, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CanvasPosition=Vector2.new(0, targetY)})
+end
+
+-- Set which item is currently selected
 GmmUI.SetSelected = function(self, idx)
-	if not self.Current then
-		return;
-	end
-	local items = self.Current.Items;
-	if (#items == 0) then
-		return;
-	end
-	idx = ((idx - 1) % #items) + 1;
-	self.SelectedIndex = idx;
+	if not self.Current then return end
+	local items = self.Current.Items
+	if (#items == 0) then return end
+
+	idx = ((idx - 1) % #items) + 1 -- Wrap index
+	self.SelectedIndex = idx
+
+	-- Update selection visuals
 	for i, it in ipairs(items) do
 		if it.__setSelected then
-			it.__setSelected(i == idx);
+			it.__setSelected(i == idx)
 		end
 	end
-	local it = items[idx];
-	self.DescLabel.Text = (it and it.Desc and (it.Desc ~= "") and it.Desc) or "Select an option.";
-	self:_updateCounter();
-	local row = it and it.__row;
+
+	-- Update description text
+	local it = items[idx]
+	self.DescLabel.Text = (it and it.Desc and (it.Desc ~= "") and it.Desc) or "Select an option."
+
+	self:_updateCounter()
+
+	-- Scroll row into view if needed
+	local row = it and it.__row
 	if row then
-		local y = row.AbsolutePosition.Y;
-		local h = row.AbsoluteSize.Y;
-		local topY = self.Scroll.AbsolutePosition.Y;
-		local botY = topY + self.Scroll.AbsoluteSize.Y;
+		local y = row.AbsolutePosition.Y
+		local h = row.AbsoluteSize.Y
+		local topY = self.Scroll.AbsolutePosition.Y
+		local botY = topY + self.Scroll.AbsoluteSize.Y
 		if (y < topY) then
-			self:_scrollTo(self.Scroll.CanvasPosition.Y - (topY - y));
+			self:_scrollTo(self.Scroll.CanvasPosition.Y - (topY - y))
 		elseif ((y + h) > botY) then
-			self:_scrollTo(self.Scroll.CanvasPosition.Y + ((y + h) - botY));
+			self:_scrollTo(self.Scroll.CanvasPosition.Y + ((y + h) - botY))
 		end
 	end
-	self:_saveMenuState();
-end;
+
+	self:_saveMenuState()
+end
+
+-- Get currently selected item object
 GmmUI._getSelectedItem = function(self)
-	if not self.Current then
-		return nil;
-	end
-	return self.Current.Items[self.SelectedIndex];
-end;
+	if not self.Current then return nil end
+	return self.Current.Items[self.SelectedIndex]
+end
+
+-- Stop holding a left/right key
 GmmUI._stopHold = function(self, dir)
 	if ((dir == nil) or (self._holdDir == dir)) then
-		self._holdDir = nil;
-		self._holdToken = (self._holdToken or 0) + 1;
+		self._holdDir = nil
+		self._holdToken = (self._holdToken or 0) + 1
 	end
-end;
+end
+
+-- Start holding left/right on a slider for repeated input
 GmmUI._startHold = function(self, dir)
-	local it = self._edit and self._edit.Item;
+	local it = self._edit and self._edit.Item
 	if not (self.Opened and it and (it == self:_getSelectedItem()) and (it.Type == "Slider")) then
-		return;
+		return
 	end
-	self._holdDir = dir;
-	self._holdToken = (self._holdToken or 0) + 1;
-	local token = self._holdToken;
+
+	self._holdDir = dir
+	self._holdToken = (self._holdToken or 0) + 1
+	local token = self._holdToken
+
 	task.spawn(function()
-		task.wait(0.35);
+		task.wait(0.35) -- initial delay
 		while (self._holdToken == token) and (self._holdDir == dir) do
-			if not self.Opened then
-				break;
-			end
-			if (not self._edit or (self._edit.Item ~= it)) then
-				break;
-			end
+			if not self.Opened then break end
+			if (not self._edit or (self._edit.Item ~= it)) then break end
 			if (dir < 0) then
-				self:DoLeft();
+				self:DoLeft()
 			else
-				self:DoRight();
+				self:DoRight()
 			end
-			task.wait(0.05);
+			task.wait(0.05) -- repeat interval
 		end
-	end);
-end;
+	end)
+end
+
+
+
+
+
+
+
+
+
+-- Begin editing a slider
 GmmUI.BeginEdit = function(self)
-	if self._edit then
-		return;
-	end
-	local it = self:_getSelectedItem();
-	if (not it or (it.Type ~= "Slider")) then
-		return;
-	end
-	self._edit = {Item=it,Original=((it.Get and it.Get()) or nil)};
-	if it.__refreshValue then
-		it.__refreshValue();
-	end
-end;
+	if self._edit then return end
+	local it = self:_getSelectedItem()
+	if (not it or (it.Type ~= "Slider")) then return end
+	self._edit = {Item=it, Original=((it.Get and it.Get()) or nil)}
+	if it.__refreshValue then it.__refreshValue() end
+end
+
+-- Confirm slider edit
 GmmUI.ConfirmEdit = function(self)
-	if not self._edit then
-		return;
-	end
-	local it = self._edit.Item;
-	self._edit = nil;
-	self:_stopHold();
-	if (it and it.__refreshValue) then
-		it.__refreshValue();
-	end
-end;
+	if not self._edit then return end
+	local it = self._edit.Item
+	self._edit = nil
+	self:_stopHold()
+	if (it and it.__refreshValue) then it.__refreshValue() end
+end
+
+-- Cancel slider edit (restore original value)
 GmmUI.CancelEdit = function(self)
-	if not self._edit then
-		return;
-	end
-	local it = self._edit.Item;
-	local original = self._edit.Original;
-	self._edit = nil;
-	self:_stopHold();
-	if (it and (original ~= nil) and it.Set) then
-		it.Set(original);
-	end
-	if (it and it.__refreshValue) then
-		it.__refreshValue();
-	end
-end;
+	if not self._edit then return end
+	local it = self._edit.Item
+	local original = self._edit.Original
+	self._edit = nil
+	self:_stopHold()
+	if (it and (original ~= nil) and it.Set) then it.Set(original) end
+	if (it and it.__refreshValue) then it.__refreshValue() end
+end
+
+-- Move left (decrease slider or list)
 GmmUI.DoLeft = function(self)
-	local it = self:_getSelectedItem();
-	if not it then
-		return;
-	end
+	local it = self:_getSelectedItem()
+	if not it then return end
 	if (it.Type == "Slider") then
-		if not (self._edit and (self._edit.Item == it)) then
-			return;
-		end
+		if not (self._edit and (self._edit.Item == it)) then return end
 	end
 	if it.Left then
-		it:Left();
-		if it.__refreshValue then
-			it.__refreshValue();
-		end
+		it:Left()
+		if it.__refreshValue then it.__refreshValue() end
 	end
-end;
+end
+
+-- Move right (increase slider or list)
 GmmUI.DoRight = function(self)
-	local it = self:_getSelectedItem();
-	if not it then
-		return;
-	end
+	local it = self:_getSelectedItem()
+	if not it then return end
 	if (it.Type == "Slider") then
-		if not (self._edit and (self._edit.Item == it)) then
-			return;
-		end
+		if not (self._edit and (self._edit.Item == it)) then return end
 	end
 	if it.Right then
-		it:Right();
-		if it.__refreshValue then
-			it.__refreshValue();
-		end
+		it:Right()
+		if it.__refreshValue then it.__refreshValue() end
 	end
-end;
+end
+
+-- Activate or select the current item
 GmmUI.Select = function(self)
-	local it = self:_getSelectedItem();
-	if not it then
-		return;
-	end
+	local it = self:_getSelectedItem()
+	if not it then return end
 	if (it.Type == "Slider") then
 		if (self._edit and (self._edit.Item == it)) then
-			self:ConfirmEdit();
+			self:ConfirmEdit()
 		else
-			self:BeginEdit();
+			self:BeginEdit()
 		end
-		return;
+		return
 	end
 	if it.Activate then
-		it:Activate();
-		if it.__refreshValue then
-			it.__refreshValue();
-		end
+		it:Activate()
+		if it.__refreshValue then it.__refreshValue() end
 	end
-end;
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Open the menu UI
 GmmUI.Open = function(self)
-	if self.Opened then
-		return;
-	end
-	self.Opened = true;
-	self.Main.Visible = true;
-	self.Main.BackgroundTransparency = 0.35;
-	tween(self.Main, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency=0.12});
-end;
+	if self.Opened then return end
+	self.Opened = true
+	self.Main.Visible = true
+	self.Main.BackgroundTransparency = 0.35
+	tween(self.Main, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency=0.12})
+end
+
+-- Close the menu UI
 GmmUI.Close = function(self)
-	if not self.Opened then
-		return;
-	end
+	if not self.Opened then return end
 	if self._edit then
-		self:ConfirmEdit();
+		self:ConfirmEdit()
 	else
-		self:_stopHold();
+		self:_stopHold()
 	end
-	self.Opened = false;
-	local t = tween(self.Main, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency=0.35});
+	self.Opened = false
+	local t = tween(self.Main, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency=0.35})
 	t.Completed:Connect(function()
 		if not self.Opened then
-			self.Main.Visible = false;
+			self.Main.Visible = false
 		end
-	end);
-end;
+	end)
+end
+
+-- Toggle open/closed state
 GmmUI.Toggle = function(self)
 	if self.Opened then
-		self:Close();
+		self:Close()
 	else
-		self:Open();
+		self:Open()
 	end
-end;
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Destroy the UI and clean up
 GmmUI.Destroy = function(self)
 	for _, c in ipairs(self._connections) do
-		pcall(function()
-			c:Disconnect();
-		end);
+		pcall(function() c:Disconnect() end)
 	end
-	self._connections = {};
+	self._connections = {}
+
 	if self._casActions then
 		for _, name in ipairs(self._casActions) do
-			pcall(function()
-				ContextActionService:UnbindAction(name);
-			end);
+			pcall(function() ContextActionService:UnbindAction(name) end)
 		end
-		self._casActions = nil;
+		self._casActions = nil
 	end
+
 	if self.Gui then
-		self.Gui:Destroy();
+		self.Gui:Destroy()
 	end
-end;
-return GmmUI;
+end
+
+-- Return the class/table
+return GmmUI
