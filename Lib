@@ -101,6 +101,51 @@ Menu.List = function(self, label, desc, values, defaultIndex, callback)
 		values = {"N/A"};
 		idx = 1;
 	end
+
+    -- Add PlayerList after List
+Menu.PlayerList = function(self, label, desc, defaultPlayer, callback)
+    local function getPlayerNames()
+        local names = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            table.insert(names, plr.Name)
+        end
+        return names
+    end
+
+    local players = getPlayerNames()
+    local defaultIndex = 1
+
+    -- Check if defaultPlayer exists in the list
+    if defaultPlayer then
+        for i, name in ipairs(players) do
+            if name == defaultPlayer then
+                defaultIndex = i
+                break
+            end
+        end
+    end
+
+    local listItem = self:List(label, desc, players, defaultIndex, callback)
+
+    -- Update list dynamically when players join or leave
+    local function updateList()
+        local currentSelection = listItem:GetIndex()
+        local newPlayers = getPlayerNames()
+        listItem.Values = newPlayers
+        -- Clamp index if needed
+        if currentSelection > #newPlayers then
+            listItem:SetIndex(#newPlayers)
+        else
+            listItem:SetIndex(currentSelection)
+        end
+    end
+
+    Players.PlayerAdded:Connect(updateList)
+    Players.PlayerRemoving:Connect(updateList)
+
+    return listItem
+end
+
 	idx = math.clamp(idx, 1, #values);
 	local function setIndex(i)
 		idx = ((i - 1) % #values) + 1;
