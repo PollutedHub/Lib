@@ -1,11 +1,13 @@
---   
+--  
 
 local Players = game:GetService("Players");
 local UserInputService = game:GetService("UserInputService");
 local TweenService = game:GetService("TweenService");
 local ContextActionService = game:GetService("ContextActionService");
+
 local GmmUI = {};
 GmmUI.__index = GmmUI;
+
 local function mk(className, props)
 	local inst = Instance.new(className);
 	for k, v in pairs(props or {}) do
@@ -13,12 +15,34 @@ local function mk(className, props)
 	end
 	return inst;
 end
+
 local function tween(obj, ti, props)
 	local t = TweenService:Create(obj, ti, props);
 	t:Play();
 	return t;
 end
-local DEFAULTS = {Title="GMM",Tab="HOME",Size=UDim2.fromOffset(320, 460),Position=UDim2.new(0.02999, 0, 0.02999, 0),DisplayOrder=2147483647,Accent=Color3.fromRGB(138, 3, 3),Select=Color3.fromRGB(138, 3, 3),Bg=Color3.fromRGB(0, 0, 0),Text=Color3.fromRGB(240, 240, 240),TitleText=Color3.fromRGB(240, 240, 240),SelectedText=Color3.fromRGB(240, 240, 240),Scroller=Color3.fromRGB(138, 3, 3),ScrollBarThickness=4,ScrollSmoothness=4,HeaderHeight=78,SubHeight=24,FooterHeight=38,RowHeight=30};
+
+local DEFAULTS = {
+	Title="GMM",
+	Tab="HOME",
+	Size=UDim2.fromOffset(320, 460),
+	Position=UDim2.new(0.02999, 0, 0.02999, 0),
+	DisplayOrder=2147483647,
+	Accent=Color3.fromRGB(138, 3, 3),
+	Select=Color3.fromRGB(138, 3, 3),
+	Bg=Color3.fromRGB(0, 0, 0),
+	Text=Color3.fromRGB(240, 240, 240),
+	TitleText=Color3.fromRGB(240, 240, 240),
+	SelectedText=Color3.fromRGB(240, 240, 240),
+	Scroller=Color3.fromRGB(138, 3, 3),
+	ScrollBarThickness=4,
+	ScrollSmoothness=4,
+	HeaderHeight=78,
+	SubHeight=24,
+	FooterHeight=38,
+	RowHeight=30
+};
+
 local function safeParentGui()
 	local lp = Players.LocalPlayer;
 	local pg = lp and lp:FindFirstChildOfClass("PlayerGui");
@@ -27,8 +51,10 @@ local function safeParentGui()
 	end
 	return game:GetService("CoreGui");
 end
+
 local Menu = {};
 Menu.__index = Menu;
+
 Menu.new = function(ui, name)
 	local self = setmetatable({}, Menu);
 	self.UI = ui;
@@ -36,36 +62,55 @@ Menu.new = function(ui, name)
 	self.Items = {};
 	return self;
 end;
+
 Menu._addItem = function(self, item)
 	table.insert(self.Items, item);
 	return item;
 end;
+
 Menu.Button = function(self, label, desc, callback)
-	return self:_addItem({Type="Button",Label=tostring(label),Desc=tostring(desc or ""),Activate=function()
-		if (typeof(callback) == "function") then
-			task.spawn(callback);
+	return self:_addItem({
+		Type="Button",
+		Label=tostring(label),
+		Desc=tostring(desc or ""),
+		Activate=function()
+			if (typeof(callback) == "function") then
+				task.spawn(callback);
+			end
 		end
-	end});
+	});
 end;
+
 Menu.Toggle = function(self, label, desc, defaultValue, callback)
 	local state = defaultValue == true;
-	return self:_addItem({Type="Toggle",Label=tostring(label),Desc=tostring(desc or ""),Get=function()
-		return state;
-	end,Set=function(v)
-		state = (v and true) or false;
-		if (typeof(callback) == "function") then
-			task.spawn(callback, state);
+	return self:_addItem({
+		Type="Toggle",
+		Label=tostring(label),
+		Desc=tostring(desc or ""),
+		Get=function()
+			return state;
+		end,
+		Set=function(v)
+			state = (v and true) or false;
+			if (typeof(callback) == "function") then
+				task.spawn(callback, state);
+			end
+		end,
+		Left=function(it)
+			it.Set(not it.Get());
+		end,
+		Right=function(it)
+			it.Set(not it.Get());
+		end,
+		Activate=function(it)
+			it.Set(not it.Get());
+		end,
+		ValueText=function(it)
+			return (it.Get() and "ON") or "OFF";
 		end
-	end,Left=function(it)
-		it.Set(not it.Get());
-	end,Right=function(it)
-		it.Set(not it.Get());
-	end,Activate=function(it)
-		it.Set(not it.Get());
-	end,ValueText=function(it)
-		return (it.Get() and "ON") or "OFF";
-	end});
+	});
 end;
+
 Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback)
 	min = tonumber(min) or 0;
 	max = tonumber(max) or 100;
@@ -75,6 +120,7 @@ Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback
 		value = min;
 	end
 	value = math.clamp(value, min, max);
+
 	local function set(v)
 		v = math.clamp(v, min, max);
 		local snapped = min + (math.floor(((v - min) / step) + 0.5) * step);
@@ -83,17 +129,20 @@ Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback
 			task.spawn(callback, value);
 		end
 	end
-	return self:_addItem({Type="Slider",Label=tostring(label),Desc=tostring(desc or ""),Get=function()
-		return value;
-	end,Set=set,Left=function(it)
-		it.Set(it.Get() - step);
-	end,Right=function(it)
-		it.Set(it.Get() + step);
-	end,Activate=function()
-	end,ValueText=function(it)
-		return tostring(it.Get());
-	end});
+
+	return self:_addItem({
+		Type="Slider",
+		Label=tostring(label),
+		Desc=tostring(desc or ""),
+		Get=function() return value; end,
+		Set=set,
+		Left=function(it) it.Set(it.Get() - step); end,
+		Right=function(it) it.Set(it.Get() + step); end,
+		Activate=function() end,
+		ValueText=function(it) return tostring(it.Get()); end
+	});
 end;
+
 Menu.List = function(self, label, desc, values, defaultIndex, callback)
 	values = ((typeof(values) == "table") and values) or {};
 	local idx = tonumber(defaultIndex) or 1;
@@ -101,75 +150,87 @@ Menu.List = function(self, label, desc, values, defaultIndex, callback)
 		values = {"N/A"};
 		idx = 1;
 	end
-
-    -- Add PlayerList after List
-Menu.PlayerList = function(self, label, desc, defaultPlayer, callback)
-    local function getPlayerNames()
-        local names = {}
-        for _, plr in ipairs(Players:GetPlayers()) do
-            table.insert(names, plr.Name)
-        end
-        return names
-    end
-
-    local players = getPlayerNames()
-    local defaultIndex = 1
-
-    -- Check if defaultPlayer exists in the list
-    if defaultPlayer then
-        for i, name in ipairs(players) do
-            if name == defaultPlayer then
-                defaultIndex = i
-                break
-            end
-        end
-    end
-
-    local listItem = self:List(label, desc, players, defaultIndex, callback)
-
-    -- Update list dynamically when players join or leave
-    local function updateList()
-        local currentSelection = listItem:GetIndex()
-        local newPlayers = getPlayerNames()
-        listItem.Values = newPlayers
-        -- Clamp index if needed
-        if currentSelection > #newPlayers then
-            listItem:SetIndex(#newPlayers)
-        else
-            listItem:SetIndex(currentSelection)
-        end
-    end
-
-    Players.PlayerAdded:Connect(updateList)
-    Players.PlayerRemoving:Connect(updateList)
-
-    return listItem
-end
-
 	idx = math.clamp(idx, 1, #values);
+
 	local function setIndex(i)
 		idx = ((i - 1) % #values) + 1;
 		if (typeof(callback) == "function") then
 			task.spawn(callback, values[idx], idx);
 		end
 	end
-	return self:_addItem({Type="List",Label=tostring(label),Desc=tostring(desc or ""),GetIndex=function()
-		return idx;
-	end,SetIndex=setIndex,Left=function(it)
-		it.SetIndex(it.GetIndex() - 1);
-	end,Right=function(it)
-		it.SetIndex(it.GetIndex() + 1);
-	end,Activate=function(it)
-		it.SetIndex(it.GetIndex() + 1);
-	end,ValueText=function(it)
-		return tostring(values[idx]);
-	end});
+
+	return self:_addItem({
+		Type="List",
+		Label=tostring(label),
+		Desc=tostring(desc or ""),
+		GetIndex=function() return idx; end,
+		SetIndex=setIndex,
+		Left=function(it) it.SetIndex(it.GetIndex() - 1); end,
+		Right=function(it) it.SetIndex(it.GetIndex() + 1); end,
+		Activate=function(it) it.SetIndex(it.GetIndex() + 1); end,
+		ValueText=function() return tostring(values[idx]); end
+	});
 end;
+
+-- Added PlayerList
+Menu.PlayerList = function(self, label, desc, defaultPlayer, callback)
+	local function getPlayerNames()
+		local names = {}
+		for _, plr in ipairs(Players:GetPlayers()) do
+			table.insert(names, plr.Name)
+		end
+		return names
+	end
+
+	local players = getPlayerNames()
+	local defaultIndex = 1
+
+	if defaultPlayer then
+		for i, name in ipairs(players) do
+			if name == defaultPlayer then
+				defaultIndex = i
+				break
+			end
+		end
+	end
+
+	local listItem = self:List(label, desc, players, defaultIndex, function(name, idx)
+		if typeof(callback) == "function" then
+			callback(name, idx)
+		end
+	end)
+
+	-- auto-update when players join/leave
+	Players.PlayerAdded:Connect(function()
+		local newPlayers = getPlayerNames()
+		listItem:SetIndex(math.min(listItem:GetIndex(), #newPlayers))
+		if typeof(callback) == "function" then
+			callback(newPlayers[listItem:GetIndex()], listItem:GetIndex())
+		end
+	end)
+
+	Players.PlayerRemoving:Connect(function()
+		local newPlayers = getPlayerNames()
+		listItem:SetIndex(math.min(listItem:GetIndex(), #newPlayers))
+		if typeof(callback) == "function" then
+			callback(newPlayers[listItem:GetIndex()], listItem:GetIndex())
+		end
+	end)
+
+	return listItem
+end
+
 Menu.Submenu = function(self, label, desc, submenu)
 	assert(getmetatable(submenu) == Menu, "Submenu must be a Menu created by UI:NewMenu(...)");
-	return self:_addItem({Type="Submenu",Label=tostring(label),Desc=tostring(desc or ""),HasArrow=true,Activate=function()
-		self.UI:PushMenu(submenu);
-	end});
+	return self:_addItem({
+		Type="Submenu",
+		Label=tostring(label),
+		Desc=tostring(desc or ""),
+		HasArrow=true,
+		Activate=function()
+			self.UI:PushMenu(submenu);
+		end
+	});
 end;
 GmmUI.new = function(opts)
 	opts = opts or {};
