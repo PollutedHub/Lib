@@ -31,19 +31,20 @@ end
 
 -- Default UI options
 local DEFAULTS = {
-	Title="GMM", Tab="HOME",
+	Title="Pol", Tab="HOME",
 	Size=UDim2.fromOffset(320, 460), Position=UDim2.new(0.02999, 0, 0.02999, 0),
 	DisplayOrder=2147483647, -- Ensure UI is on top
-	Accent=Color3.fromRGB(138, 3, 3), -- Main accent color
-	Select=Color3.fromRGB(138, 3, 3), -- Color when item selected
+	Accent=Color3.fromRGB(0, 138, 3), -- Main accent color (green)
+	Select=Color3.fromRGB(0, 138, 3), -- Color when item selected (green)
 	Bg=Color3.fromRGB(0, 0, 0), -- Background color
 	Text=Color3.fromRGB(240, 240, 240), -- Default text color
 	TitleText=Color3.fromRGB(240, 240, 240), -- Title text color
 	SelectedText=Color3.fromRGB(240, 240, 240), -- Selected text color
-	Scroller=Color3.fromRGB(138, 3, 3), -- Scroll bar color
+	Scroller=Color3.fromRGB(0, 138, 3), -- Scroll bar color (green)
 	ScrollBarThickness=4, ScrollSmoothness=4, -- Scroll customization
 	HeaderHeight=78, SubHeight=24, FooterHeight=38, RowHeight=30
 }
+
 
 -- Safely get a parent for GUI
 local function safeParentGui()
