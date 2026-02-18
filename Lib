@@ -245,6 +245,15 @@ PolMenu.new = function(opts)
 	})
 	self.Main = main
 
+-- Interaction sound
+local sound = Instance.new("Sound")
+sound.SoundId = "rbxassetid://6042053626" -- Your sound effect
+sound.Volume = 0.5 -- Adjust volume if needed
+sound.PlayOnRemove = false
+sound.Parent = self.Main
+self._sound = sound
+
+
 	-- Header
 	local header = mk("Frame", {
 		Name="Header",
@@ -422,22 +431,30 @@ PolMenu.new = function(opts)
 
 	-- Bind navigation keys (Up/Down/Left/Right, PageUp/PageDown, Back, Select)
 	-- Up
-	bind("PolMenu_Up", function(_, state)
-		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
-		if not self.Opened then return Enum.ContextActionResult.Pass end
-		if self._edit then return Enum.ContextActionResult.Sink end
-		self:SetSelected(self.SelectedIndex - 1)
-		return Enum.ContextActionResult.Sink
-	end, Enum.KeyCode.Up, Enum.KeyCode.KeypadEight, Enum.KeyCode.I)
+bind("PolMenu_Up", function(_, state)
+	if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
+	if not self.Opened then return Enum.ContextActionResult.Pass end
+	if self._edit then return Enum.ContextActionResult.Sink end
+
+	self:SetSelected(self.SelectedIndex - 1)
+	self:_playSound() -- Play sound when moving up
+
+	return Enum.ContextActionResult.Sink
+end, Enum.KeyCode.Up, Enum.KeyCode.KeypadEight, Enum.KeyCode.I)
+
 
 	-- Down
-	bind("PolMenu_Down", function(_, state)
-		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
-		if not self.Opened then return Enum.ContextActionResult.Pass end
-		if self._edit then return Enum.ContextActionResult.Sink end
-		self:SetSelected(self.SelectedIndex + 1)
-		return Enum.ContextActionResult.Sink
-	end, Enum.KeyCode.Down, Enum.KeyCode.KeypadTwo, Enum.KeyCode.K)
+bind("PolMenu_Down", function(_, state)
+	if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
+	if not self.Opened then return Enum.ContextActionResult.Pass end
+	if self._edit then return Enum.ContextActionResult.Sink end
+
+	self:SetSelected(self.SelectedIndex + 1)
+	self:_playSound() -- Play sound when moving down
+
+	return Enum.ContextActionResult.Sink
+end, Enum.KeyCode.Down, Enum.KeyCode.KeypadTwo, Enum.KeyCode.K)
+
 
 	-- Left
 	bind("PolMenu_Left", function(_, state)
@@ -883,9 +900,11 @@ PolMenu.DoLeft = function(self)
 	end
 	if it.Left then
 		it:Left()
+		self:_playSound() -- Play sound when moving left / decreasing value
 		if it.__refreshValue then it.__refreshValue() end
 	end
 end
+
 
 -- Move right (increase slider or list)
 PolMenu.DoRight = function(self)
@@ -896,27 +915,37 @@ PolMenu.DoRight = function(self)
 	end
 	if it.Right then
 		it:Right()
+		self:_playSound() -- Play sound when moving right / increasing value
 		if it.__refreshValue then it.__refreshValue() end
 	end
 end
+
 
 -- Activate or select the current item
 PolMenu.Select = function(self)
 	local it = self:_getSelectedItem()
 	if not it then return end
+
+	-- Slider handling
 	if (it.Type == "Slider") then
 		if (self._edit and (self._edit.Item == it)) then
 			self:ConfirmEdit()
+			self:_playSound() -- Play sound when confirming slider
 		else
 			self:BeginEdit()
+			self:_playSound() -- Play sound when starting slider edit
 		end
 		return
 	end
+
+	-- Buttons, submenus, etc.
 	if it.Activate then
 		it:Activate()
+		self:_playSound() -- Play sound when activating/selecting
 		if it.__refreshValue then it.__refreshValue() end
 	end
 end
+
 
 -- Open the menu UI
 PolMenu.Open = function(self)
@@ -971,6 +1000,14 @@ PolMenu.Destroy = function(self)
 		self.Gui:Destroy()
 	end
 end
+
+-- Play the menu interaction sound
+PolMenu._playSound = function(self)
+    if self._sound then
+        self._sound:Play()
+    end
+end
+
 
 -- Return the class/table
 return PolMenu
