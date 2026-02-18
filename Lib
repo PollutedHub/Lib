@@ -1,229 +1,234 @@
--- PolluteUI Library
-local PolluteUI = {}
-PolluteUI.__index = PolluteUI
+-- EZMenu.lua
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
 
--- Constructor
-function PolluteUI.new(executorName)
-    local self = setmetatable({}, PolluteUI)
-    
-    -- Services
-    local Players = game:GetService("Players")
-    local UIS = game:GetService("UserInputService")
-    local player = Players.LocalPlayer
+local EZMenu = {}
+EZMenu.__index = EZMenu
 
-    self.executorName = executorName or "Executor"
-    self.Players = Players
-    self.UIS = UIS
-    self.player = player
-    self.pageStack = {"HOME"}
-    self.selectedIndex = 1
-    self.MenuTree = {}
-    self.buttons = {}
-
-    -- GUI
-    self.gui = Instance.new("ScreenGui")
-    self.gui.Name = "PolluteMenu"
-    self.gui.ResetOnSpawn = false
-    self.gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    self.gui.Parent = player:WaitForChild("PlayerGui")
-
-    -- Main panel
-    self.main = Instance.new("Frame", self.gui)
-    self.main.Size = UDim2.fromOffset(360, 440)
-    self.main.Position = UDim2.fromOffset(40, 160)
-    self.main.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    self.main.BackgroundTransparency = 0.45
-    self.main.BorderSizePixel = 0
-
-    -- Title
-    self.title = Instance.new("TextLabel", self.main)
-    self.title.Size = UDim2.fromOffset(360, 48)
-    self.title.BackgroundColor3 = Color3.fromRGB(0,210,0)
-    self.title.Text = "POLLUTE"
-    self.title.TextColor3 = Color3.new(1,1,1)
-    self.title.Font = Enum.Font.GothamBlack
-    self.title.TextScaled = true
-    self.title.BorderSizePixel = 0
-
-    -- Breadcrumb
-    self.breadcrumb = Instance.new("TextLabel", self.title)
-    self.breadcrumb.Size = UDim2.fromScale(0.6,1)
-    self.breadcrumb.Position = UDim2.fromScale(0.02,0)
-    self.breadcrumb.BackgroundTransparency = 1
-    self.breadcrumb.TextXAlignment = Enum.TextXAlignment.Left
-    self.breadcrumb.TextYAlignment = Enum.TextYAlignment.Center
-    self.breadcrumb.TextColor3 = Color3.new(1,1,1)
-    self.breadcrumb.Font = Enum.Font.GothamBold
-    self.breadcrumb.TextSize = 14
-    self.breadcrumb.Text = "HOME"
-
-    -- Counter
-    self.counter = Instance.new("TextLabel", self.title)
-    self.counter.Size = UDim2.fromScale(0.35,1)
-    self.counter.Position = UDim2.fromScale(0.63,0)
-    self.counter.BackgroundTransparency = 1
-    self.counter.TextXAlignment = Enum.TextXAlignment.Right
-    self.counter.TextYAlignment = Enum.TextYAlignment.Center
-    self.counter.TextColor3 = Color3.new(1,1,1)
-    self.counter.Font = Enum.Font.GothamBold
-    self.counter.TextSize = 14
-    self.counter.Text = "1/1"
-
-    -- Content
-    self.content = Instance.new("Frame", self.main)
-    self.content.Position = UDim2.fromOffset(0,48)
-    self.content.Size = UDim2.fromOffset(360,340)
-    self.content.BackgroundTransparency = 1
-
-    -- Footer
-    self.footer = Instance.new("TextLabel", self.main)
-    self.footer.Position = UDim2.fromOffset(0,388)
-    self.footer.Size = UDim2.fromOffset(360,52)
-    self.footer.BackgroundColor3 = Color3.fromRGB(15,15,15)
-    self.footer.BackgroundTransparency = 0.45
-    self.footer.TextColor3 = Color3.fromRGB(200,200,200)
-    self.footer.Font = Enum.Font.Gotham
-    self.footer.TextSize = 14
-    self.footer.TextXAlignment = Enum.TextXAlignment.Left
-    self.footer.TextYAlignment = Enum.TextYAlignment.Center
-    self.footer.BorderSizePixel = 0
-    self.footer.Text = "   "
-
-    -- Create 20 buttons
-    for i = 1,20 do
-        local lbl = Instance.new("TextLabel", self.content)
-        lbl.Size = UDim2.fromOffset(360,34)
-        lbl.Position = UDim2.fromOffset(0,(i-1)*34)
-        lbl.BackgroundColor3 = Color3.fromRGB(35,35,35)
-        lbl.BackgroundTransparency = 0.15
-        lbl.TextColor3 = Color3.new(1,1,1)
-        lbl.Font = Enum.Font.Gotham
-        lbl.TextSize = 16
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.TextYAlignment = Enum.TextYAlignment.Center
-        lbl.BorderSizePixel = 0
-        lbl.Visible = false
-        self.buttons[i] = lbl
-    end
-
-    -- Input handling
-    UIS.InputBegan:Connect(function(input,gp)
-        if not gp then self:HandleInput(input) end
-    end)
-
-    return self
+local function mk(className, props)
+	local inst = Instance.new(className)
+	for k, v in pairs(props or {}) do
+		inst[k] = v
+	end
+	return inst
 end
 
--- Create a new tab (auto adds a button in HOME to open it)
-function PolluteUI:CreateTab(tabName)
-    if not self.MenuTree[tabName] then
-        self.MenuTree[tabName] = {}
-        
-        -- Auto add a button in HOME to access this tab
-        if tabName ~= "HOME" then
-            self:CreateTab("HOME") -- ensure HOME exists
-            local exists = false
-            for _,btn in ipairs(self.MenuTree["HOME"]) do
-                if btn.submenu == tabName then
-                    exists = true
-                    break
-                end
-            end
-            if not exists then
-                table.insert(self.MenuTree["HOME"], {name = tabName, desc = "Open "..tabName.." tab", submenu = tabName})
-            end
-        end
-    end
+local function tween(obj, ti, props)
+	local t = TweenService:Create(obj, ti, props)
+	t:Play()
+	return t
 end
 
--- Add button to a tab
--- submenu = string (tab name to open)
--- callback = function to run when pressing enter
-function PolluteUI:AddButton(tabName, name, desc, submenu, callback)
-    self:CreateTab(tabName)
-    table.insert(self.MenuTree[tabName], {
-        name = name,
-        desc = desc or "",
-        submenu = submenu,
-        callback = callback
-    })
+local DEFAULTS = {
+	Title="EZMenu", Tab="HOME", Size=UDim2.fromOffset(320, 460), Position=UDim2.new(0.02999, 0, 0.02999, 0),
+	DisplayOrder=2147483647, Accent=Color3.fromRGB(138, 3, 3), Select=Color3.fromRGB(138, 3, 3),
+	Bg=Color3.fromRGB(0, 0, 0), Text=Color3.fromRGB(240, 240, 240), TitleText=Color3.fromRGB(240, 240, 240),
+	SelectedText=Color3.fromRGB(240, 240, 240), Scroller=Color3.fromRGB(138, 3, 3), ScrollBarThickness=4,
+	ScrollSmoothness=4, HeaderHeight=78, SubHeight=24, FooterHeight=38, RowHeight=30
+}
+
+local function safeParentGui()
+	local lp = Players.LocalPlayer
+	local pg = lp and lp:FindFirstChildOfClass("PlayerGui")
+	if pg then
+		return pg
+	end
+	return game:GetService("CoreGui")
 end
 
--- Clamp helper
-function PolluteUI:Clamp(val,min,max)
-    return math.max(min,math.min(max,val))
+-- Menu class
+local Menu = {}
+Menu.__index = Menu
+
+Menu.new = function(ui, name)
+	local self = setmetatable({}, Menu)
+	self.UI = ui
+	self.Name = tostring(name or "MENU"):upper()
+	self.Items = {}
+	return self
 end
 
--- Render function
-function PolluteUI:Render()
-    local page = self.pageStack[#self.pageStack]
-    
-    -- Update Players tab automatically
-    if page == "Players" then
-        self.MenuTree.Players = {}
-        for _,plr in ipairs(self.Players:GetPlayers()) do
-            table.insert(self.MenuTree.Players,{name=plr.Name, desc="Player"})
-        end
-    end
-
-    local options = self.MenuTree[page] or {}
-    self.breadcrumb.Text = page
-    self.counter.Text = self.selectedIndex .. "/" .. #options
-
-    for i,lbl in ipairs(self.buttons) do
-        local opt = options[i]
-        lbl.Visible = opt ~= nil
-        if opt then
-            lbl.Text = "   "..opt.name..(opt.submenu and "   >" or "")
-            lbl.BackgroundColor3 = (i==self.selectedIndex) and Color3.fromRGB(0,210,0) or Color3.fromRGB(35,35,35)
-            lbl.TextColor3 = (i==self.selectedIndex) and Color3.new(0,0,0) or Color3.new(1,1,1)
-        end
-    end
-
-    local opt = options[self.selectedIndex]
-    self.footer.Text = "   "..(opt and opt.desc or "")
+Menu._addItem = function(self, item)
+	table.insert(self.Items, item)
+	return item
 end
 
--- Input handling
-function PolluteUI:HandleInput(input)
-    local page = self.pageStack[#self.pageStack]
-    local options = self.MenuTree[page] or {}
-    local opt = options[self.selectedIndex]
-
-    if input.KeyCode == Enum.KeyCode.Down then
-        self.selectedIndex = self:Clamp(self.selectedIndex+1,1,#options)
-        self:Render()
-    elseif input.KeyCode == Enum.KeyCode.Up then
-        self.selectedIndex = self:Clamp(self.selectedIndex-1,1,#options)
-        self:Render()
-    elseif input.KeyCode == Enum.KeyCode.Backspace and #self.pageStack>1 then
-        table.remove(self.pageStack)
-        self.selectedIndex = 1
-        self:Render()
-    elseif input.KeyCode == Enum.KeyCode.Return then
-        if opt then
-            if opt.submenu then
-                -- Go into tab
-                table.insert(self.pageStack,opt.submenu)
-                self.selectedIndex = 1
-                self:Render()
-            elseif opt.callback then
-                -- Run callback
-                opt.callback()
-            end
-        end
-    end
+Menu.Button = function(self, label, desc, callback)
+	return self:_addItem({Type="Button", Label=tostring(label), Desc=tostring(desc or ""), Activate=function()
+		if typeof(callback) == "function" then
+			task.spawn(callback)
+		end
+	end})
 end
 
--- Open menu
-function PolluteUI:Open()
-    self.gui.Enabled = true
-    self:Render()
+Menu.Toggle = function(self, label, desc, defaultValue, callback)
+	local state = defaultValue == true
+	return self:_addItem({
+		Type="Toggle", Label=tostring(label), Desc=tostring(desc or ""),
+		Get=function() return state end,
+		Set=function(v)
+			state = v and true or false
+			if typeof(callback) == "function" then
+				task.spawn(callback, state)
+			end
+		end,
+		Left=function(it) it.Set(not it.Get()) end,
+		Right=function(it) it.Set(not it.Get()) end,
+		Activate=function(it) it.Set(not it.Get()) end,
+		ValueText=function(it) return it.Get() and "ON" or "OFF" end
+	})
 end
 
--- Close menu
-function PolluteUI:Close()
-    self.gui.Enabled = false
+Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback)
+	min = tonumber(min) or 0
+	max = tonumber(max) or 100
+	step = tonumber(step) or 1
+	local value = tonumber(defaultValue) or min
+	value = math.clamp(value, min, max)
+	local function set(v)
+		v = math.clamp(v, min, max)
+		local snapped = min + (math.floor(((v - min) / step) + 0.5) * step)
+		value = math.clamp(snapped, min, max)
+		if typeof(callback) == "function" then
+			task.spawn(callback, value)
+		end
+	end
+	return self:_addItem({
+		Type="Slider", Label=tostring(label), Desc=tostring(desc or ""),
+		Get=function() return value end,
+		Set=set,
+		Left=function(it) it.Set(it.Get() - step) end,
+		Right=function(it) it.Set(it.Get() + step) end,
+		Activate=function() end,
+		ValueText=function(it) return tostring(it.Get()) end
+	})
 end
 
-return PolluteUI
+Menu.List = function(self, label, desc, values, defaultIndex, callback)
+	values = typeof(values) == "table" and values or {}
+	local idx = tonumber(defaultIndex) or 1
+	if #values == 0 then
+		values = {"N/A"}
+		idx = 1
+	end
+	idx = math.clamp(idx, 1, #values)
+	local function setIndex(i)
+		idx = ((i - 1) % #values) + 1
+		if typeof(callback) == "function" then
+			task.spawn(callback, values[idx], idx)
+		end
+	end
+	return self:_addItem({
+		Type="List", Label=tostring(label), Desc=tostring(desc or ""),
+		GetIndex=function() return idx end,
+		SetIndex=setIndex,
+		Left=function(it) it.SetIndex(it.GetIndex() - 1) end,
+		Right=function(it) it.SetIndex(it.GetIndex() + 1) end,
+		Activate=function(it) it.SetIndex(it.GetIndex() + 1) end,
+		ValueText=function(it) return tostring(values[idx]) end
+	})
+end
+
+Menu.Submenu = function(self, label, desc, submenu)
+	assert(getmetatable(submenu) == Menu, "Submenu must be a Menu created by EZMenu:NewMenu(...)")
+	return self:_addItem({
+		Type="Submenu", Label=tostring(label), Desc=tostring(desc or ""), HasArrow=true,
+		Activate=function() self.UI:PushMenu(submenu) end
+	})
+end
+
+-- EZMenu constructor
+EZMenu.new = function(opts)
+	opts = opts or {}
+	for k, v in pairs(DEFAULTS) do
+		if opts[k] == nil then
+			opts[k] = v
+		end
+	end
+
+	local self = setmetatable({}, EZMenu)
+	self.Opts = opts
+	self.Opened = true
+	self.MenuStack = {}
+	self.Current = nil
+	self.SelectedIndex = 0
+	self._connections = {}
+	self._rowObjects = {}
+	self._edit = nil
+	self._holdDir = nil
+	self._holdToken = 0
+
+	local gui = mk("ScreenGui", {
+		Name="EZMenu", ResetOnSpawn=false, IgnoreGuiInset=true,
+		ZIndexBehavior=Enum.ZIndexBehavior.Sibling, DisplayOrder=opts.DisplayOrder,
+		Parent=safeParentGui()
+	})
+	self.Gui = gui
+
+	local main = mk("Frame", {
+		Name="Main", Parent=gui, Size=opts.Size, Position=opts.Position,
+		BackgroundColor3=opts.Bg, BackgroundTransparency=0.12, BorderSizePixel=0, ClipsDescendants=true
+	})
+	self.Main = main
+
+	local header = mk("Frame", {Name="Header", Parent=main, Size=UDim2.new(1, 0, 0, opts.HeaderHeight), BackgroundColor3=opts.Accent, BorderSizePixel=0})
+	self.Header = header
+	self.TitleLabel = mk("TextLabel", {
+		Parent=header, BackgroundTransparency=1, Size=UDim2.new(1, 0, 1, 0),
+		Font=Enum.Font.GothamBlack, Text=tostring(opts.Title):upper(), TextColor3=opts.TitleText,
+		TextSize=44, TextStrokeTransparency=0.78, TextStrokeColor3=Color3.fromRGB(0, 0, 0)
+	})
+
+	local sub = mk("Frame", {Name="Sub", Parent=main, Position=UDim2.fromOffset(0, opts.HeaderHeight), Size=UDim2.new(1, 0, 0, opts.SubHeight), BackgroundColor3=opts.Bg, BorderSizePixel=0})
+	self.Sub = sub
+	self.TabLabel = mk("TextLabel", {Parent=sub, BackgroundTransparency=1, Position=UDim2.fromOffset(10, 0), Size=UDim2.new(0.6, 0, 1, 0), Font=Enum.Font.GothamMedium, Text=tostring(opts.Tab):upper(), TextColor3=opts.Text, TextSize=14, TextXAlignment=Enum.TextXAlignment.Left})
+	self.CounterLabel = mk("TextLabel", {Parent=sub, BackgroundTransparency=1, Position=UDim2.new(0.6, 0, 0, 0), Size=UDim2.new(0.4, -10, 1, 0), Font=Enum.Font.GothamMedium, Text="0 / 0", TextColor3=opts.Text, TextSize=14, TextXAlignment=Enum.TextXAlignment.Right})
+
+	local listTop = opts.HeaderHeight + opts.SubHeight
+	local listBottom = opts.FooterHeight
+	local listHeightOffset = listTop + listBottom
+	local scroll = mk("ScrollingFrame", {
+		Name="Scroll", Parent=main, Position=UDim2.fromOffset(0, listTop), Size=UDim2.new(1, 0, 1, -listHeightOffset),
+		BackgroundTransparency=1, BorderSizePixel=0, ScrollBarThickness=opts.ScrollBarThickness,
+		ScrollBarImageColor3=opts.Scroller, CanvasSize=UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize=Enum.AutomaticSize.Y, ScrollingDirection=Enum.ScrollingDirection.Y, ScrollingEnabled=false
+	})
+	self.Scroll = scroll
+	self.Layout = mk("UIListLayout", {Parent=scroll, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0, 0)})
+
+	local footer = mk("Frame", {Name="Footer", Parent=main, Position=UDim2.new(0, 0, 1, -opts.FooterHeight), Size=UDim2.new(1, 0, 0, opts.FooterHeight), BackgroundColor3=opts.Bg, BorderSizePixel=0})
+	self.Footer = footer
+	mk("Frame", {Parent=footer, Size=UDim2.new(1, 0, 0, 2), BackgroundColor3=opts.Accent, BorderSizePixel=0})
+	self.DescLabel = mk("TextLabel", {Parent=footer, BackgroundTransparency=1, Position=UDim2.fromOffset(8, 2), Size=UDim2.new(1, -16, 1, -4), Font=Enum.Font.Gotham, Text="Select an option.", TextColor3=opts.Text, TextSize=12, TextXAlignment=Enum.TextXAlignment.Left, TextYAlignment=Enum.TextYAlignment.Center, TextWrapped=true})
+
+	-- default PlayerList menu
+	local function createPlayerListMenu(ui)
+		local menu = ui:NewMenu("Players")
+		local function updatePlayers()
+			menu.Items = {}
+			for _, player in ipairs(Players:GetPlayers()) do
+				menu:Button(player.Name, "Player in the game", function()
+					print("Clicked player:", player.Name)
+				end)
+			end
+			if ui.Current == menu then
+				ui:_renderMenu(menu)
+			end
+		end
+		updatePlayers()
+		table.insert(ui._connections, Players.PlayerAdded:Connect(updatePlayers))
+		table.insert(ui._connections, Players.PlayerRemoving:Connect(updatePlayers))
+		table.insert(ui.MenuStack, menu)
+	end
+	createPlayerListMenu(self)
+
+	return self
+end
+
+EZMenu.NewMenu = function(self, name)
+	return Menu.new(self, name)
+end
+
+return EZMenu
