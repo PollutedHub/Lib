@@ -9,9 +9,9 @@ local UserInputService = game:GetService("UserInputService") -- For input detect
 local TweenService = game:GetService("TweenService") -- For smooth property transitions
 local ContextActionService = game:GetService("ContextActionService") -- For binding keys to actions
 
--- GmmUI class/table
-local GmmUI = {};
-GmmUI.__index = GmmUI;
+-- PolMenu class/table
+local PolMenu = {};
+PolMenu.__index = PolMenu;
 
 -- Helper function to create new instances with properties
 local function mk(className, props)
@@ -45,17 +45,6 @@ local DEFAULTS = {
 	HeaderHeight=78, SubHeight=24, FooterHeight=38, RowHeight=30
 }
 
-
-
-
-
-
-
-
-
-
-
-
 -- Safely get a parent for GUI
 local function safeParentGui()
 	local lp = Players.LocalPlayer
@@ -85,18 +74,6 @@ Menu._addItem = function(self, item)
 	return item
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
 -- Add a button to the menu
 Menu.Button = function(self, label, desc, callback)
 	return self:_addItem({
@@ -110,17 +87,6 @@ Menu.Button = function(self, label, desc, callback)
 		end
 	})
 end
-
-
-
-
-
-
-
-
-
-
-
 
 -- Add a toggle (on/off) to the menu
 Menu.Toggle = function(self, label, desc, defaultValue, callback)
@@ -142,29 +108,6 @@ Menu.Toggle = function(self, label, desc, defaultValue, callback)
 		ValueText=function(it) return (it.Get() and "ON") or "OFF" end -- Display text
 	})
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 -- Add a slider to the menu
 Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback)
@@ -195,16 +138,6 @@ Menu.Slider = function(self, label, desc, min, max, step, defaultValue, callback
 		ValueText=function(it) return tostring(it.Get()) end -- Display value
 	})
 end
-
-
-
-
-
-
-
-
-
-
 
 -- Add a list (selection) to the menu
 Menu.List = function(self, label, desc, values, defaultIndex, callback)
@@ -265,8 +198,9 @@ end
 
 
 
--- Main GmmUI constructor
-GmmUI.new = function(opts)
+
+-- Main PolMenu constructor
+PolMenu.new = function(opts)
 	opts = opts or {}
 	for k, v in pairs(DEFAULTS) do
 		if (opts[k] == nil) then
@@ -274,7 +208,7 @@ GmmUI.new = function(opts)
 		end
 	end
 
-	local self = setmetatable({}, GmmUI)
+	local self = setmetatable({}, PolMenu)
 	self.Opts = opts
 	self.Opened = true -- UI starts opened
 	self.MenuStack = {} -- Stack of menus for navigation
@@ -288,7 +222,7 @@ GmmUI.new = function(opts)
 
 	-- Main ScreenGui
 	local gui = mk("ScreenGui", {
-		Name="GmmUI",
+		Name="PolMenu",
 		ResetOnSpawn=false,
 		IgnoreGuiInset=true,
 		ZIndexBehavior=Enum.ZIndexBehavior.Sibling,
@@ -459,8 +393,9 @@ GmmUI.new = function(opts)
 
 
 
+
 	-- List of input actions
-	self._casActions = {"GmmUI_Toggle","GmmUI_Up","GmmUI_Down","GmmUI_Left","GmmUI_Right","GmmUI_PageUp","GmmUI_PageDown","GmmUI_Back","GmmUI_Select"}
+	self._casActions = {"PolMenu_Toggle","PolMenu_Up","PolMenu_Down","PolMenu_Left","PolMenu_Right","PolMenu_PageUp","PolMenu_PageDown","PolMenu_Back","PolMenu_Select"}
 
 	-- Unbind existing actions to avoid conflicts
 	for _, name in ipairs(self._casActions) do
@@ -478,7 +413,7 @@ GmmUI.new = function(opts)
 	end
 
 	-- Bind toggle key
-	bind("GmmUI_Toggle", function(_, state)
+	bind("PolMenu_Toggle", function(_, state)
 		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
 		self:Toggle()
 		return Enum.ContextActionResult.Sink
@@ -486,7 +421,7 @@ GmmUI.new = function(opts)
 
 	-- Bind navigation keys (Up/Down/Left/Right, PageUp/PageDown, Back, Select)
 	-- Up
-	bind("GmmUI_Up", function(_, state)
+	bind("PolMenu_Up", function(_, state)
 		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		if self._edit then return Enum.ContextActionResult.Sink end
@@ -495,7 +430,7 @@ GmmUI.new = function(opts)
 	end, Enum.KeyCode.Up, Enum.KeyCode.KeypadEight, Enum.KeyCode.I)
 
 	-- Down
-	bind("GmmUI_Down", function(_, state)
+	bind("PolMenu_Down", function(_, state)
 		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		if self._edit then return Enum.ContextActionResult.Sink end
@@ -504,7 +439,7 @@ GmmUI.new = function(opts)
 	end, Enum.KeyCode.Down, Enum.KeyCode.KeypadTwo, Enum.KeyCode.K)
 
 	-- Left
-	bind("GmmUI_Left", function(_, state)
+	bind("PolMenu_Left", function(_, state)
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		if (state == Enum.UserInputState.Begin) then
 			self:DoLeft()
@@ -518,7 +453,7 @@ GmmUI.new = function(opts)
 	end, Enum.KeyCode.Left, Enum.KeyCode.KeypadFour, Enum.KeyCode.J)
 
 	-- Right
-	bind("GmmUI_Right", function(_, state)
+	bind("PolMenu_Right", function(_, state)
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		if (state == Enum.UserInputState.Begin) then
 			self:DoRight()
@@ -532,7 +467,7 @@ GmmUI.new = function(opts)
 	end, Enum.KeyCode.Right, Enum.KeyCode.KeypadSix, Enum.KeyCode.L)
 
 	-- PageUp
-	bind("GmmUI_PageUp", function(_, state)
+	bind("PolMenu_PageUp", function(_, state)
 		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		if self._edit then return Enum.ContextActionResult.Sink end
@@ -541,7 +476,7 @@ GmmUI.new = function(opts)
 	end, Enum.KeyCode.PageUp, Enum.KeyCode.KeypadNine)
 
 	-- PageDown
-	bind("GmmUI_PageDown", function(_, state)
+	bind("PolMenu_PageDown", function(_, state)
 		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		if self._edit then return Enum.ContextActionResult.Sink end
@@ -550,7 +485,7 @@ GmmUI.new = function(opts)
 	end, Enum.KeyCode.PageDown, Enum.KeyCode.KeypadThree)
 
 	-- Back
-	bind("GmmUI_Back", function(_, state)
+	bind("PolMenu_Back", function(_, state)
 		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		if self._edit then
@@ -562,7 +497,7 @@ GmmUI.new = function(opts)
 	end, Enum.KeyCode.Backspace, Enum.KeyCode.KeypadZero, Enum.KeyCode.U)
 
 	-- Select
-	bind("GmmUI_Select", function(_, state)
+	bind("PolMenu_Select", function(_, state)
 		if (state ~= Enum.UserInputState.Begin) then return Enum.ContextActionResult.Pass end
 		if not self.Opened then return Enum.ContextActionResult.Pass end
 		self:Select()
@@ -571,59 +506,30 @@ GmmUI.new = function(opts)
 	return self;
 end;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- Create a new menu inside the UI
-GmmUI.NewMenu = function(self, name)
+PolMenu.NewMenu = function(self, name)
 	return Menu.new(self, name)
 end
 
-
-
-
 -- Set the title text of the UI
-GmmUI.SetTitle = function(self, text)
+PolMenu.SetTitle = function(self, text)
 	self.TitleLabel.Text = tostring(text):upper()
 end
 
 -- Set the tab/sub-header text
-GmmUI.SetTab = function(self, text)
+PolMenu.SetTab = function(self, text)
 	self.TabLabel.Text = tostring(text):upper()
 end
 
 -- Update the counter showing current selected item / total items
-GmmUI._updateCounter = function(self)
+PolMenu._updateCounter = function(self)
 	local total = (self.Current and #self.Current.Items) or 0 -- Total items in current menu
 	local sel = ((total > 0) and math.clamp(self.SelectedIndex, 1, total)) or 0 -- Clamp selected index
 	self.CounterLabel.Text = string.format("%d / %d", sel, total)
 end
 
 -- Save the current menu state (selected index and scroll position)
-GmmUI._saveMenuState = function(self)
+PolMenu._saveMenuState = function(self)
 	local menu = self.Current
 	if not menu then
 		return
@@ -636,7 +542,7 @@ GmmUI._saveMenuState = function(self)
 end
 
 -- Clear all UI rows from previous menu
-GmmUI._clearRows = function(self)
+PolMenu._clearRows = function(self)
 	for _, row in ipairs(self._rowObjects) do
 		if (row and row.Destroy) then
 			row:Destroy() -- Remove the UI element
@@ -645,8 +551,12 @@ GmmUI._clearRows = function(self)
 	self._rowObjects = {}
 end
 
+
+
+
+
 -- Create a single row/button for a menu item
-GmmUI._makeRow = function(self, item, index)
+PolMenu._makeRow = function(self, item, index)
 	local opts = self.Opts
 	local row = mk("TextButton", {
 		Parent=self.Scroll,
@@ -761,7 +671,7 @@ GmmUI._makeRow = function(self, item, index)
 end
 
 -- Render a menu (create rows, set tab, restore selection)
-GmmUI._renderMenu = function(self, menu)
+PolMenu._renderMenu = function(self, menu)
 	self:_clearRows()
 	self.Current = menu
 	self:SetTab(menu.Name)
@@ -796,14 +706,14 @@ GmmUI._renderMenu = function(self, menu)
 end
 
 -- Push a new menu onto the stack
-GmmUI.PushMenu = function(self, menu)
+PolMenu.PushMenu = function(self, menu)
 	self:_saveMenuState()
 	table.insert(self.MenuStack, menu)
 	self:_renderMenu(menu)
 end
 
 -- Go back to previous menu in stack
-GmmUI.Back = function(self)
+PolMenu.Back = function(self)
 	if self._edit then
 		self:CancelEdit()
 		return
@@ -819,7 +729,7 @@ GmmUI.Back = function(self)
 end
 
 -- Smooth scroll to a specific Y position in menu
-GmmUI._scrollTo = function(self, targetY)
+PolMenu._scrollTo = function(self, targetY)
 	local scroll = self.Scroll
 	if not scroll then return end
 
@@ -847,7 +757,7 @@ GmmUI._scrollTo = function(self, targetY)
 end
 
 -- Set which item is currently selected
-GmmUI.SetSelected = function(self, idx)
+PolMenu.SetSelected = function(self, idx)
 	if not self.Current then return end
 	local items = self.Current.Items
 	if (#items == 0) then return end
@@ -886,13 +796,13 @@ GmmUI.SetSelected = function(self, idx)
 end
 
 -- Get currently selected item object
-GmmUI._getSelectedItem = function(self)
+PolMenu._getSelectedItem = function(self)
 	if not self.Current then return nil end
 	return self.Current.Items[self.SelectedIndex]
 end
 
 -- Stop holding a left/right key
-GmmUI._stopHold = function(self, dir)
+PolMenu._stopHold = function(self, dir)
 	if ((dir == nil) or (self._holdDir == dir)) then
 		self._holdDir = nil
 		self._holdToken = (self._holdToken or 0) + 1
@@ -900,7 +810,7 @@ GmmUI._stopHold = function(self, dir)
 end
 
 -- Start holding left/right on a slider for repeated input
-GmmUI._startHold = function(self, dir)
+PolMenu._startHold = function(self, dir)
 	local it = self._edit and self._edit.Item
 	if not (self.Opened and it and (it == self:_getSelectedItem()) and (it.Type == "Slider")) then
 		return
@@ -933,8 +843,9 @@ end
 
 
 
+
 -- Begin editing a slider
-GmmUI.BeginEdit = function(self)
+PolMenu.BeginEdit = function(self)
 	if self._edit then return end
 	local it = self:_getSelectedItem()
 	if (not it or (it.Type ~= "Slider")) then return end
@@ -943,7 +854,7 @@ GmmUI.BeginEdit = function(self)
 end
 
 -- Confirm slider edit
-GmmUI.ConfirmEdit = function(self)
+PolMenu.ConfirmEdit = function(self)
 	if not self._edit then return end
 	local it = self._edit.Item
 	self._edit = nil
@@ -952,7 +863,7 @@ GmmUI.ConfirmEdit = function(self)
 end
 
 -- Cancel slider edit (restore original value)
-GmmUI.CancelEdit = function(self)
+PolMenu.CancelEdit = function(self)
 	if not self._edit then return end
 	local it = self._edit.Item
 	local original = self._edit.Original
@@ -963,7 +874,7 @@ GmmUI.CancelEdit = function(self)
 end
 
 -- Move left (decrease slider or list)
-GmmUI.DoLeft = function(self)
+PolMenu.DoLeft = function(self)
 	local it = self:_getSelectedItem()
 	if not it then return end
 	if (it.Type == "Slider") then
@@ -976,7 +887,7 @@ GmmUI.DoLeft = function(self)
 end
 
 -- Move right (increase slider or list)
-GmmUI.DoRight = function(self)
+PolMenu.DoRight = function(self)
 	local it = self:_getSelectedItem()
 	if not it then return end
 	if (it.Type == "Slider") then
@@ -989,7 +900,7 @@ GmmUI.DoRight = function(self)
 end
 
 -- Activate or select the current item
-GmmUI.Select = function(self)
+PolMenu.Select = function(self)
 	local it = self:_getSelectedItem()
 	if not it then return end
 	if (it.Type == "Slider") then
@@ -1006,22 +917,8 @@ GmmUI.Select = function(self)
 	end
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- Open the menu UI
-GmmUI.Open = function(self)
+PolMenu.Open = function(self)
 	if self.Opened then return end
 	self.Opened = true
 	self.Main.Visible = true
@@ -1030,7 +927,7 @@ GmmUI.Open = function(self)
 end
 
 -- Close the menu UI
-GmmUI.Close = function(self)
+PolMenu.Close = function(self)
 	if not self.Opened then return end
 	if self._edit then
 		self:ConfirmEdit()
@@ -1047,7 +944,7 @@ GmmUI.Close = function(self)
 end
 
 -- Toggle open/closed state
-GmmUI.Toggle = function(self)
+PolMenu.Toggle = function(self)
 	if self.Opened then
 		self:Close()
 	else
@@ -1055,22 +952,8 @@ GmmUI.Toggle = function(self)
 	end
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- Destroy the UI and clean up
-GmmUI.Destroy = function(self)
+PolMenu.Destroy = function(self)
 	for _, c in ipairs(self._connections) do
 		pcall(function() c:Disconnect() end)
 	end
@@ -1089,4 +972,4 @@ GmmUI.Destroy = function(self)
 end
 
 -- Return the class/table
-return GmmUI
+return PolMenu
